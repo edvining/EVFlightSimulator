@@ -572,6 +572,7 @@ void renderer::renderSimulatorObjects(GravitySimulator* simulator, Shader& shade
 }
 
 void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
+    simulator->storingPositionsMutex.lock();
     float screenHeightInv = 1.0f / scrHeight;
     indexBuffer.clear();
     positions3.clear();
@@ -658,6 +659,7 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
     IndexBuffer ib1(indexBuffer.data(), static_cast<int>(indexBuffer.size()));
 
     Draw(va1, ib1, shader, window);
+    simulator->storingPositionsMutex.unlock();
 }
 
 void renderer::renderCircle(const Shader& shader) {

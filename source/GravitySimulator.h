@@ -40,6 +40,7 @@ public:
     SimType::RunMode type = SimType::Modified;
     int numThreads = (int)std::thread::hardware_concurrency();
     std::mutex accelMutex;
+    std::mutex storingPositionsMutex;
     bool useRK = true;
     bool showTraces = true;
     int RKStep = 1;
@@ -125,10 +126,12 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
+                        storingPositionsMutex.lock();
                         for (PhysicsObject* object : allObjects)
                         {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                         }
+                        storingPositionsMutex.unlock();
                         if (positionStoreDelay < dt / substeps) {
                             nextStorageTime += dt / substeps;
                         }
@@ -170,15 +173,17 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
-                        // Store positions and clear forces for all physics objects
-                        for (PhysicsObject* object : allObjects) {
+                        storingPositionsMutex.lock();
+                        for (PhysicsObject* object : allObjects)
+                        {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                             object->ClearForce();
                         }
-
-                        // Adjust the next storage time based on positionStoreDelay and the time step
-                        double minStorageDelay = dt / substeps;
-                        nextStorageTime += std::max((double)positionStoreDelay, minStorageDelay);
+                        storingPositionsMutex.unlock();
+                        if (positionStoreDelay < dt / substeps) {
+                            nextStorageTime += dt / substeps;
+                        }
+                        else { nextStorageTime += positionStoreDelay; }
                     }
                     else {
                         for (PhysicsObject* object : allObjects)

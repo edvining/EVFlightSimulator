@@ -147,8 +147,8 @@ void GravitationalLensing() {
     simulator.referenceObject = &sun;
     simulator.showTraces = true;
     simulator.storingPositions = true;
-    simulator.useRK = true;
-    simulator.paused = true;
+    simulator.useRK = false;
+    simulator.paused = false;
     sun.referenceObject = nullptr;
     simulator.positionStoreDelay = 0.1;
     simulator.numberOfStoredPositions = 1000;
