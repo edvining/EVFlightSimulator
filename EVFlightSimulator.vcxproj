@@ -153,7 +153,6 @@
     <ClCompile Include="resource\imgui\imgui_widgets.cpp" />
     <ClCompile Include="resource\imgui\implot.cpp" />
     <ClCompile Include="resource\imgui\implot_items.cpp" />
-    <ClCompile Include="resource\imgui\main.cpp" />
     <ClCompile Include="resource\stb_image\stb_image.cpp" />
     <ClCompile Include="source\IndexBuffer.cpp" />
     <ClCompile Include="source\main.cpp" />
@@ -488,7 +487,6 @@
     <None Include="resource\GLEW\doc\install.html" />
     <None Include="resource\GLEW\doc\log.html" />
     <None Include="resource\GLEW\doc\wglew.html" />
-    <None Include="resource\GLFW\lib-vc2022\glfw3.dll" />
     <None Include="resource\glm\detail\func_common.inl" />
     <None Include="resource\glm\detail\func_common_simd.inl" />
     <None Include="resource\glm\detail\func_exponential.inl" />
@@ -628,18 +626,6 @@
     <None Include="res\shaders\shader.frag" />
     <None Include="res\shaders\shader.vert" />
     <None Include="res\shaders\shaderNew.frag" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="resource\GLEW\LICENSE.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="resource\GLEW\lib\Release\Win32\glew32.lib" />
-    <Library Include="resource\GLEW\lib\Release\Win32\glew32s.lib" />
-    <Library Include="resource\GLEW\lib\Release\x64\glew32.lib" />
-    <Library Include="resource\GLEW\lib\Release\x64\glew32s.lib" />
-    <Library Include="resource\GLFW\lib-vc2022\glfw3.lib" />
-    <Library Include="resource\GLFW\lib-vc2022\glfw3dll.lib" />
-    <Library Include="resource\GLFW\lib-vc2022\glfw3_mt.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
