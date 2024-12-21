@@ -69,6 +69,9 @@
     <ClCompile Include="resource\imgui\implot_items.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="resource\imgui\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource\glad\include\glad\glad.h">
@@ -1433,5 +1436,18 @@
     <None Include="res\shaders\shader.frag" />
     <None Include="res\shaders\shader.vert" />
     <None Include="res\shaders\shaderNew.frag" />
+    <None Include="resource\GLFW\lib-vc2022\glfw3.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="resource\GLEW\LICENSE.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="resource\GLEW\lib\Release\x64\glew32.lib" />
+    <Library Include="resource\GLEW\lib\Release\x64\glew32s.lib" />
+    <Library Include="resource\GLEW\lib\Release\Win32\glew32.lib" />
+    <Library Include="resource\GLEW\lib\Release\Win32\glew32s.lib" />
+    <Library Include="resource\GLFW\lib-vc2022\glfw3.lib" />
+    <Library Include="resource\GLFW\lib-vc2022\glfw3_mt.lib" />
+    <Library Include="resource\GLFW\lib-vc2022\glfw3dll.lib" />
   </ItemGroup>
 </Project>
