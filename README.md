@@ -1,4 +1,4 @@
-# EchoVictorFlightSimulator
+# EchoVictorFlightSimulator (Visual Studio Version)
 
 This is the start of the OpenGL Flight Simulator made by me, Edward Vining (aka Echo Victor).
 
