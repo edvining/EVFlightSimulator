@@ -150,7 +150,7 @@ void GravitationalLensing() {
     simulator.useRK = false;
     sun.referenceObject = nullptr;
     simulator.positionStoreDelay = 1;
-    simulator.numberOfStoredPositions = 100;
+    simulator.numberOfStoredPositions = 10;
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
 
@@ -221,6 +221,6 @@ void LotsOfGravObjs() {
 }
 
 int main() {
-    LotsOfGravObjs();
+    GravitationalLensing();
 	return 0;
 }
