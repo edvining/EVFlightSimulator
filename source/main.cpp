@@ -25,7 +25,7 @@
 #include <future>
 
 using application = renderer;
-double minimumdt = 1.0/10000000.0;
+double minimumdt = 1.0/1000000000000000.0;
 
 bool paused = false;
 void RunSim(GravitySimulator* sim, application* app) {
@@ -96,7 +96,7 @@ void LotsOfBalls() {
         1000 * triple{ 3.351857209931528E+00,  8.822830821269344E+00, -2.872934017773172E-01 });
     simulator.AddObject(&saturn);
     std::vector<PhysicsObject*> generatedObjs;
-    for (int i = 0; i < 300; i++) {
+    for (int i = 0; i < 30; i++) {
         double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0f * i) + earth.radius));
         generatedObjs.push_back(new PhysicsObject("Empty", 10, 100000, earth.p + triple((double)(1000000.0f * i) + earth.radius, 0, 0), earth.v + triple(0, calculatedV, 0), false, &sun));
     }
@@ -135,9 +135,9 @@ void GravitationalLensing() {
         { 1.102867590529470E+01, -8.970075624225537, -1.590822813779761E-01 });
     simulator.AddObject(&sun);
     std::vector<PhysicsObject*> generatedObjs;
-    for (int i = 0; i < 3000; i++) {
+    for (int i = 0; i < 30; i++) {
         double calculatedV = sqrt((GravitySimulator::G * sun.m) / ((double)(1000000.0f * i) + sun.radius));
-        generatedObjs.push_back(new PhysicsObject("Empty", 10, 100000, sun.p + triple((double)(10000000.0f * i)+sun.radius, 0, -100000000000.0f), sun.v + triple(0, 0, 3e8), false, &sun));
+        generatedObjs.push_back(new PhysicsObject("Empty", 10, 100000, sun.p + triple((double)(10000000.0f * i)+sun.radius, 0, 0.0), sun.v + triple(0, 0, 3e8), false, &sun));
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
         simulator.AddObject(generatedObjs[i]);
@@ -147,10 +147,11 @@ void GravitationalLensing() {
     simulator.referenceObject = &sun;
     simulator.showTraces = true;
     simulator.storingPositions = true;
-    simulator.useRK = false;
+    simulator.useRK = true;
+    simulator.paused = true;
     sun.referenceObject = nullptr;
-    simulator.positionStoreDelay = 1;
-    simulator.numberOfStoredPositions = 10;
+    simulator.positionStoreDelay = 0.1;
+    simulator.numberOfStoredPositions = 1000;
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
 

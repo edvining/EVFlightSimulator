@@ -28,8 +28,8 @@ public:
 	/// <param name="p"></param>
 	/// <param name="v"></param>
 	/// <param name="a"></param>
-	PhysicsObject(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : name(name), p(p), v(v), a(triple::zero()), m(m), radius(radius), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z }, contributesToGravity(contributesToGravSim), referenceObject(refObj) { /*pastPositions.push_back(p);*/ }
-	PhysicsObject() : name("Empty"), p(triple::zero()), v(triple::zero()), a(triple::zero()), m(10), radius(1), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z } {}
+	PhysicsObject(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : name(name), p(p), v(v), a(triple::zero()), m(m), radius(radius), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z }, contributesToGravity(contributesToGravSim), referenceObject(refObj) { pastPositions.push_back(p); }
+	PhysicsObject() : name("Empty"), p(triple::zero()), v(triple::zero()), a(triple::zero()), m(10), radius(1), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z } { pastPositions.push_back(p); }
 	triple GetPosition()
 	{
 		return p;
@@ -126,7 +126,7 @@ public:
 	void StoreCurrentPosition(int numberOfStoredPositions)
 	{
 		pastPositions.push_back(this->p);
-		if (pastPositions.size() > numberOfStoredPositions) {
+		while (pastPositions.size() > numberOfStoredPositions) {
 			pastPositions.erase(pastPositions.begin());
 		}
 	}

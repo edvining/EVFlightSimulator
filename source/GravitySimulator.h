@@ -103,10 +103,11 @@ public:
                     UpdateObjects((dt) / substeps, type);
                     SolveDistanceConstraints();
                     timeElapsed += dt / substeps;
+                    seconds += dt / substeps;
 
-                    if (timeElapsed >= 60.0) {
+                    if (seconds >= 60.0) {
                         minutes += static_cast<int>(timeElapsed) / 60;
-                        timeElapsed = fmod(timeElapsed, 60.0); // Remainder after dividing by 60
+                        seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 
                         if (minutes >= 60) {
                             hours += minutes / 60;
@@ -149,7 +150,7 @@ public:
                     SolveDistanceConstraints();
                     timeElapsed += dt / substeps;
                     seconds += dt / substeps;
-                    if (timeElapsed >= 60.0) {
+                    if (seconds >= 60.0) {
                         minutes += static_cast<int>(seconds) / 60;
                         seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 

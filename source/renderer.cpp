@@ -598,7 +598,7 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
                     referencePosition = simulator->referenceObject->pastPositions[j];
                     referenceCurrentPosition = simulator->referenceObject->p;
                 }
-                if (simulator->allObjects[i]->referenceObject != 0)
+                if (simulator->allObjects[i]->referenceObject != nullptr)
                 {
                     referencePosition = simulator->allObjects[i]->referenceObject->pastPositions[j];
                     referenceCurrentPosition = simulator->allObjects[i]->referenceObject->p;
@@ -720,7 +720,7 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
     if (key == GLFW_KEY_COMMA && action == GLFW_PRESS)
     {
         instance->linkedSim->timeWarp = instance->linkedSim->timeWarp / 2.0f;
-        if (instance->linkedSim->timeWarp < 1) instance->linkedSim->timeWarp = 1;
+        if (instance->linkedSim->timeWarp < 0.01f) instance->linkedSim->timeWarp = 0.01f;
     }
     if (key == GLFW_KEY_RIGHT_BRACKET && action == GLFW_PRESS)
     {
