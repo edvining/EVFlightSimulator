@@ -126,12 +126,10 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
-                        storingPositionsMutex.lock();
                         for (PhysicsObject* object : allObjects)
                         {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                         }
-                        storingPositionsMutex.unlock();
                         if (positionStoreDelay < dt / substeps) {
                             nextStorageTime += dt / substeps;
                         }
@@ -173,13 +171,11 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
-                        storingPositionsMutex.lock();
                         for (PhysicsObject* object : allObjects)
                         {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                             object->ClearForce();
                         }
-                        storingPositionsMutex.unlock();
                         if (positionStoreDelay < dt / substeps) {
                             nextStorageTime += dt / substeps;
                         }
