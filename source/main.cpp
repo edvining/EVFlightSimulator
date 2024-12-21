@@ -1,4 +1,3 @@
-
 #include <GL/glew.h>
 #define GLEW_STATIC
 #include <GLFW/glfw3.h>
