@@ -98,8 +98,8 @@ void LotsOfBalls() {
     simulator.AddObject(&saturn);
     std::vector<PhysicsObject*> generatedObjs;
     for (int i = 0; i < 3; i++) {
-        double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0f * i) + earth.radius));
-        generatedObjs.push_back(new PhysicsObject("Empty", 10, 100000, earth.p + triple((double)(1000000.0f * i) + earth.radius, 0, 0), earth.v + triple(0, calculatedV, 0), false, &sun));
+        double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(10.0 * i) + earth.radius+400000.0));
+        generatedObjs.push_back(new PhysicsObject("Empty", 10, 2, earth.p + triple((10.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV+(0.001*i), 0), false, &sun));
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
         simulator.AddObject(generatedObjs[i]);

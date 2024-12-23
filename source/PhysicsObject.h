@@ -11,6 +11,7 @@ public:
 	triple a1, a2, a3, a4;
 	triple ExternalForces;
 	std::vector<triple> pastPositions;
+	std::vector<triple> pastPositionstemp;
 	PhysicsObject* referenceObject = nullptr;
 	const char* name;
 	double GPE;
@@ -125,9 +126,10 @@ public:
 
 	void StoreCurrentPosition(int numberOfStoredPositions)
 	{
-		pastPositions.push_back(this->p);
-		while (pastPositions.size() > numberOfStoredPositions) {
-			pastPositions.erase(pastPositions.begin());
+		pastPositionstemp.push_back(this->p);
+		while (pastPositionstemp.size() > numberOfStoredPositions) {
+			pastPositionstemp.erase(pastPositionstemp.begin());
 		}
+		pastPositions = pastPositionstemp;
 	}
 };
