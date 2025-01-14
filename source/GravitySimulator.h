@@ -22,7 +22,7 @@ private:
     std::queue<std::function<void()>> workQueue;
     std::mutex queueMutex;
     std::condition_variable condition;
-    bool stop;
+    bool stop = false;
     std::vector<std::thread> threads;
 public:
     static constexpr double G = 6.67e-11;
@@ -33,8 +33,8 @@ public:
     PhysicsObject* selectedObject;
     PhysicsObject* referenceObject;
     double timeElapsed = 0;
-    int years, days, hours, minutes;
-    double seconds;
+    int years = 0, days = 0, hours = 0, minutes = 0;
+    double seconds = 0.0;
     float positionStoreDelay = 1000;
     double nextStorageTime = 0;
     SimType::RunMode type = SimType::Modified;
@@ -52,15 +52,15 @@ public:
     double viewPosX = 0, viewPosY = 0;
     double deltaX = 0, deltaY = 0;
     int width = 0, height = 0;
-    float cameraRotationX = 0.0f;
-    float cameraRotationY = 0.0f;
-    float timeWarp = 1;
-    float myDt;
+    double cameraRotationX = 0.0f;
+    double cameraRotationY = 0.0f;
+    double timeWarp = 1;
+    double myDt = 0;
     bool paused = false;
     bool storingPositions = false;
     int numberOfStoredPositions = 1000;
 
-    void RKSimStep(float dt)
+    void RKSimStep(double dt)
     {
         switch (RKStep) {
         case 1: for (PhysicsObject* object : allObjects) {
@@ -82,13 +82,13 @@ public:
         return LIGHTSPEED;
     }
 
-    void RunSimulation(float inputdt, int substeps)
+    void RunSimulation(double inputdt, int substeps)
     {
         if(!paused)
         {
             if(selectedObject == nullptr){}
             else { ResetUniverseOrigin(selectedObject); }
-            float dt = timeWarp * inputdt;
+            double dt = timeWarp * inputdt;
             myDt = inputdt;
             for (int i = 0; i < substeps; i++)
             {
@@ -317,7 +317,7 @@ public:
     }
 
     void CalculateForcesWorker() {
-        size_t k = allObjects.size();
+        int k = (int)allObjects.size();
         for (int i = 0; i < k; i++)
         {
             {
@@ -763,7 +763,7 @@ public:
         }
     }
 
-    void UpdateObjects(float dt, int type)
+    void UpdateObjects(double dt, int type)
     {
         for (PhysicsObject* object : allObjects)
         {
@@ -828,7 +828,7 @@ public:
         {
             momentumVec += allObjects[i]->m * allObjects[i]->v;
         }
-        momentum = momentumVec.magnitude();
+        momentum = momentumVec.magnitudef();
         return (float)(momentum);
 
     }

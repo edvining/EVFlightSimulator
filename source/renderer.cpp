@@ -97,8 +97,8 @@ void renderer::stopRendering() {
     if (renderThread.joinable()) renderThread.join();
 }
 
-std::vector<float> frameTimes;
-std::vector<float> frameTimes2;
+std::vector<double> frameTimes;
+std::vector<double> frameTimes2;
 
 void renderer::render() {
     {
@@ -130,7 +130,7 @@ void renderer::render() {
             start = clock1::now();
 
             // Save render and sim times to vectors
-            frameTimes.push_back(renderdt);
+            frameTimes.push_back((float)renderdt);
             while (frameTimes.size() > 400) {
                 frameTimes.erase(frameTimes.begin());
             }
@@ -377,7 +377,7 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
         int days = linkedSim->days;
         int hrs = linkedSim->hours;
         int mins = linkedSim->minutes;
-        float secs = linkedSim->seconds;
+        double secs = linkedSim->seconds;
         if (years < 1) {
             ImGui::Text("Elapsed Time: %i days %02i:%02i:%06.3f", days, hrs, mins, secs);
         }
@@ -393,8 +393,8 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
         ImGui::DragInt("Number of stored positions: ", &linkedSim->numberOfStoredPositions, 1, 1000);
         // Dropdown menu to select an object
         std::vector<PhysicsObject*> vec = linkedSim->allObjects;
-        static int selectedObjectIndex = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
-        static int selectedObjectIndex2 = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+        static int selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
+        static int selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
         if (selectedObjectIndex2 >= linkedSim->allObjects.size()) {
             selectedObjectIndex2 = 0;
         }
@@ -410,7 +410,7 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
         }
 
         // Render the dropdown
-        if (ImGui::Combo("Select Object", &selectedObjectIndex, objectNamesCStr.data(), objectNamesCStr.size())) {
+        if (ImGui::Combo("Select Object", &selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
             // Optional: Handle object selection changes
         }
 
@@ -423,7 +423,7 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->allObjects[selectedObjectIndex]->v).magnitude(), (linkedSim->allObjects[selectedObjectIndex]->v).magnitude() / 299792458.0);
         }
         // Render the dropdown
-        if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), objectNamesCStr.size())) {
+        if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
             // Optional: Handle object selection changes
         }
     }
@@ -528,14 +528,14 @@ void renderer::renderSimulatorObjects(GravitySimulator* simulator, Shader& shade
 
         // Apply camera rotation with Z as the up-down axis
         // Yaw (Z-axis rotation)
-        double cosZ = cos(simulator->cameraRotationY);
-        double sinZ = sin(simulator->cameraRotationY);
+        double cosZ = (float)cos(simulator->cameraRotationY);
+        double sinZ = (float)sin(simulator->cameraRotationY);
         double tempX = objX * cosZ - objY * sinZ;
         double tempY = objX * sinZ + objY * cosZ;
 
         // Pitch (X-axis rotation)
-        float cosX = cos(simulator->cameraRotationX);
-        float sinX = sin(simulator->cameraRotationX);
+        float cosX = (float)cos(simulator->cameraRotationX);
+        float sinX = (float)sin(simulator->cameraRotationX);
         float finalY = (float)(tempY * cosX - objZ * sinX);
         float finalZ = (float)(tempY * sinX + objZ * cosX + centre[1] * scrHeight);
         float finalX = (float)(tempX + centre[0] * scrHeight);
@@ -580,7 +580,6 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
 
     centre[0] = simulator->viewPosX + ((simulator->deltaX) * simulator->zoomLevel * screenHeightInv);
     centre[1] = simulator->viewPosY + ((-simulator->deltaY) * simulator->zoomLevel * screenHeightInv);
-    int selectedObjIndex;
     unsigned int baseIndex = 0;
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
@@ -621,14 +620,14 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
 
                 // Apply camera rotation with Z as the up-down axis
                 // Yaw (Z-axis rotation)
-                double cosZ = cos(simulator->cameraRotationY);
-                double sinZ = sin(simulator->cameraRotationY);
+                double cosZ = (float)cos(simulator->cameraRotationY);
+                double sinZ = (float)sin(simulator->cameraRotationY);
                 double tempX = objX * cosZ - objY * sinZ;
                 double tempY = objX * sinZ + objY * cosZ;
 
                 // Pitch (X-axis rotation)
-                float cosX = cos(simulator->cameraRotationX);
-                float sinX = sin(simulator->cameraRotationX);
+                float cosX = (float)cos(simulator->cameraRotationX);
+                float sinX = (float)sin(simulator->cameraRotationX);
                 float finalY = (float)(tempY * cosX - objZ * sinX);
                 float finalZ = (float)(tempY * sinX + objZ * cosX + centre[1] * scrHeight);
                 float finalX = (float)(tempX + centre[0] * scrHeight);
@@ -726,11 +725,11 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
     }
     if (key == GLFW_KEY_RIGHT_BRACKET && action == GLFW_PRESS)
     {
-        instance->linkedSim->substeps = instance->linkedSim->substeps * 2.0f;
+        instance->linkedSim->substeps = instance->linkedSim->substeps * 2;
     }
     if (key == GLFW_KEY_LEFT_BRACKET && action == GLFW_PRESS)
     {
-        instance->linkedSim->substeps = instance->linkedSim->substeps / 2.0f;
+        instance->linkedSim->substeps = instance->linkedSim->substeps / 2;
         if (instance->linkedSim->substeps < 1) instance->linkedSim->substeps = 1;
     }
     if (key == GLFW_KEY_SLASH && action == GLFW_PRESS)

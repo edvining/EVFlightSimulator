@@ -47,7 +47,7 @@ public:
     float cameraRotationX = 1.4f;
     float cameraRotationY = 1.4f;
     bool mouseBTN2Held = false;
-    float centre[2] = { (float)0, (float)0 };
+    double centre[2] = { 0.0, 0.0 };
     bool VSYNC = false;
 
     renderer();

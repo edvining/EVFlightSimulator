@@ -48,7 +48,7 @@ public:
 	{
 		return a;
 	}
-	void EulerStep(const float dt)
+	void EulerStep(double dt)
 	{
 		this->p = this->p + this->v * dt;
 		this->outputPosition[0] = (float)this->p.x;
@@ -60,7 +60,7 @@ public:
 		}
 		ClearForce();
 	}
-	void VerletStep(const float dt)
+	void VerletStep(double dt)
 	{
 		this->p += this->v * dt + this->a * (dt * dt * 0.5f);
 		this->outputPosition[0] = (float)this->p.x;
@@ -73,25 +73,25 @@ public:
 		ClearForce();
 	}
 
-	void RK4Step1(const float dt)
+	void RK4Step1(double dt)
 	{
 		this->p1 = this->p;
 		this->p2 = this->p1 + this->v * dt + 0.5f * this->a1 * dt * dt;
 	}
 
-	void RK4Step2(const float dt)
+	void RK4Step2(double dt)
 	{
-		float dtOver2 = dt * 0.5f;
+		double dtOver2 = dt * 0.5f;
 		this->p3 = this->p1 + this->v * dtOver2 + 0.5f * this->a2 * dtOver2 * dtOver2;
 	}
 
-	void RK4Step3(const float dt)
+	void RK4Step3(double dt)
 	{
-		float dtOver2 = dt * 0.5f;
+		double dtOver2 = dt * 0.5f;
 		this->p4 = this->p1 + this->v * dtOver2 + 0.5f * this->a3 * dtOver2 * dtOver2;
 	}
 
-	void RK4Step4(const float dt)
+	void RK4Step4(double dt)
 	{
 		triple a1 = this->a1;
 		triple a2 = this->a2;
