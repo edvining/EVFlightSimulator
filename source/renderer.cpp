@@ -41,7 +41,7 @@ renderer::renderer(int openGLversionMajor, int openGLversionMinor, int width, in
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_TRUE);
     // Create the window
-    window = glfwCreateWindow(scrWidth, scrHeight, title, nullptr, nullptr);
+    window = glfwCreateWindow(scrWidth, scrHeight, title, NULL, NULL);
     if (!window) {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
@@ -57,8 +57,7 @@ renderer::renderer(int openGLversionMajor, int openGLversionMinor, int width, in
     glfwSetKeyCallback(window, key_callback);
     // Initialize OpenGL context
     glfwMakeContextCurrent(window);
-    if (VSYNC) glfwSwapInterval(1);
-    else glfwSwapInterval(0); // Enable V-Sync
+    glfwSwapInterval(VSYNC); // Enable V-Sync
     // Initialize GLEW
     if (glewInit() != GLEW_OK) {
         throw std::runtime_error("GLEW initialization error!");
@@ -249,7 +248,6 @@ void renderer::rendernonmt() {
 
         while (!glfwWindowShouldClose(window)) {
             glViewport(0, 0, scrWidth, scrHeight);
-            ImGui::GetIO().DisplaySize = ImVec2((float)scrWidth, (float)scrHeight);
             double renderdt = (clock1::now() - start).count() / 1000000000.0;
             start = clock1::now();
 
@@ -276,64 +274,65 @@ void renderer::rendernonmt() {
             renderSimulatorObjects(linkedSim, shader);
 
             renderImGui(linkedSim);
-            // Handle mouse input (this part is unconventional to place here, usually in the render loop)
-            int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-            if (state == GLFW_PRESS)
-            {
-                if (mouseBTN1Held) {
-                    glfwGetCursorPos(window, &linkedSim->currentMouseX, &linkedSim->currentMouseY);
-                    linkedSim->deltaX = (linkedSim->currentMouseX - linkedSim->lastMouseX) * 2.0f;
-                    linkedSim->deltaY = (linkedSim->currentMouseY - linkedSim->lastMouseY) * 2.0f;
+            if (!ImGui::GetIO().WantCaptureMouse) {
+                int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+                if (state == GLFW_PRESS)
+                {
+                    if (mouseBTN1Held) {
+                        glfwGetCursorPos(window, &linkedSim->currentMouseX, &linkedSim->currentMouseY);
+                        linkedSim->deltaX = (linkedSim->currentMouseX - linkedSim->lastMouseX) * 2.0f;
+                        linkedSim->deltaY = (linkedSim->currentMouseY - linkedSim->lastMouseY) * 2.0f;
+                    }
+                    else {
+                        mouseBTN1Held = true;
+                        glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
+                    }
+                }
+                if (state == GLFW_RELEASE) {
+                    if (mouseBTN1Held) {
+                        linkedSim->viewPosX += linkedSim->deltaX * linkedSim->zoomLevel / scrHeight;
+                        linkedSim->viewPosY += -linkedSim->deltaY * linkedSim->zoomLevel / scrHeight;
+                        linkedSim->deltaX = 0;
+                        linkedSim->deltaY = 0;
+                    }
+                    mouseBTN1Held = false;
+                }
+
+                state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+                if (state == GLFW_PRESS)
+                {
+                    linkedSim->viewPosX = 0;
+                    linkedSim->viewPosY = 0;
+                }
+                state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE);
+                if (state == GLFW_PRESS) {
+                    if (mouseBTN2Held) {
+                        double currentMouseX, currentMouseY;
+                        glfwGetCursorPos(window, &currentMouseX, &currentMouseY);
+
+                        // Calculate the difference in mouse position
+                        double deltaX = (currentMouseX - linkedSim->lastMouseX);
+                        double deltaY = (currentMouseY - linkedSim->lastMouseY);
+
+                        // Adjust the camera rotation based on the mouse movement
+                        linkedSim->cameraRotationX += deltaY * 0.001f;  // Rotation around X-axis
+                        linkedSim->cameraRotationY += deltaX * 0.001f;  // Rotation around Y-axis
+                        if (linkedSim->cameraRotationX > 1.4f)
+                            linkedSim->cameraRotationX = 1.4f;
+                        if (linkedSim->cameraRotationX < -1.4f)
+                            linkedSim->cameraRotationX = -1.4f;
+                        // Store the current mouse position for the next frame
+                        linkedSim->lastMouseX = currentMouseX;
+                        linkedSim->lastMouseY = currentMouseY;
+                    }
+                    else {
+                        mouseBTN2Held = true;
+                        glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
+                    }
                 }
                 else {
-                    mouseBTN1Held = true;
-                    glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
+                    mouseBTN2Held = false;
                 }
-            }
-            if (state == GLFW_RELEASE) {
-                if (mouseBTN1Held) {
-                    linkedSim->viewPosX += linkedSim->deltaX * linkedSim->zoomLevel / scrHeight;
-                    linkedSim->viewPosY += -linkedSim->deltaY * linkedSim->zoomLevel / scrHeight;
-                    linkedSim->deltaX = 0;
-                    linkedSim->deltaY = 0;
-                }
-                mouseBTN1Held = false;
-            }
-
-            state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
-            if (state == GLFW_PRESS)
-            {
-                linkedSim->viewPosX = 0;
-                linkedSim->viewPosY = 0;
-            }
-            state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE);
-            if (state == GLFW_PRESS) {
-                if (mouseBTN2Held) {
-                    double currentMouseX, currentMouseY;
-                    glfwGetCursorPos(window, &currentMouseX, &currentMouseY);
-
-                    // Calculate the difference in mouse position
-                    double deltaX = (currentMouseX - linkedSim->lastMouseX);
-                    double deltaY = (currentMouseY - linkedSim->lastMouseY);
-
-                    // Adjust the camera rotation based on the mouse movement
-                    linkedSim->cameraRotationX += deltaY * 0.001f;  // Rotation around X-axis
-                    linkedSim->cameraRotationY += deltaX * 0.001f;  // Rotation around Y-axis
-                    if (linkedSim->cameraRotationX > 1.4f)
-                        linkedSim->cameraRotationX = 1.4f;
-                    if (linkedSim->cameraRotationX < -1.4f)
-                        linkedSim->cameraRotationX = -1.4f;
-                    // Store the current mouse position for the next frame
-                    linkedSim->lastMouseX = currentMouseX;
-                    linkedSim->lastMouseY = currentMouseY;
-                }
-                else {
-                    mouseBTN2Held = true;
-                    glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
-                }
-            }
-            else {
-                mouseBTN2Held = false;
             }
             // Swap buffers
             glfwSwapBuffers(window);
@@ -395,7 +394,10 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
         // Dropdown menu to select an object
         std::vector<PhysicsObject*> vec = linkedSim->allObjects;
         static int selectedObjectIndex = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
-        static int selectedObjectIndex2 = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));;
+        static int selectedObjectIndex2 = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+        if (selectedObjectIndex2 >= linkedSim->allObjects.size()) {
+            selectedObjectIndex2 = 0;
+        }
         std::vector<std::string> objectNames; // Placeholder for object names
         for (size_t i = 0; i < linkedSim->allObjects.size(); ++i) {
             objectNames.push_back(linkedSim->allObjects[i]->name); // Generate names like "Object 1", "Object 2", etc.
@@ -591,14 +593,14 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
                 {
                     _va1l = simulator->zoomLevel * 1.5f;
                 }
-                triple pastPosition = simulator->allObjects[i]->pastPositions[j];
-                triple referencePosition, referenceCurrentPosition;
+                triple pastPosition, referencePosition, referenceCurrentPosition;
+                pastPosition = simulator->allObjects[i]->pastPositions[j];
                 if (simulator->referenceObject != nullptr)
                 {
                     referencePosition = simulator->referenceObject->pastPositions[j];
                     referenceCurrentPosition = simulator->referenceObject->p;
                 }
-                if (simulator->allObjects[i]->referenceObject != 0)
+                if (simulator->allObjects[i]->referenceObject != nullptr)
                 {
                     referencePosition = simulator->allObjects[i]->referenceObject->pastPositions[j];
                     referenceCurrentPosition = simulator->allObjects[i]->referenceObject->p;
@@ -720,7 +722,7 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
     if (key == GLFW_KEY_COMMA && action == GLFW_PRESS)
     {
         instance->linkedSim->timeWarp = instance->linkedSim->timeWarp / 2.0f;
-        if (instance->linkedSim->timeWarp < 1) instance->linkedSim->timeWarp = 1;
+        if (instance->linkedSim->timeWarp < 0.01f) instance->linkedSim->timeWarp = 0.01f;
     }
     if (key == GLFW_KEY_RIGHT_BRACKET && action == GLFW_PRESS)
     {
@@ -740,13 +742,17 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
         if (instance->linkedSim->showTraces) instance->linkedSim->showTraces = false;
         else instance->linkedSim->showTraces = true;
     }
+    if (key == GLFW_KEY_V && action == GLFW_PRESS)
+    {
+        instance->VSYNC = !instance->VSYNC;
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(instance->VSYNC);
+    }
     if (key == GLFW_KEY_F && action == GLFW_PRESS)
     {
         if (instance->fullscreen) {
             GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            if (instance->VSYNC)glfwSetWindowMonitor(window, NULL, instance->xpos, instance->ypos, instance->linkedSim->width, instance->linkedSim->height, mode->refreshRate);
-            else glfwSetWindowMonitor(window, NULL, instance->xpos, instance->ypos, instance->linkedSim->width, instance->linkedSim->height, 0);
+            glfwSetWindowMonitor(window, NULL, instance->xpos, instance->ypos, instance->linkedSim->width, instance->linkedSim->height, 0);
             instance->fullscreen = false;
         }
         else
@@ -756,7 +762,6 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
             GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
             glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
             instance->fullscreen = true;
         }

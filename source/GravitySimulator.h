@@ -40,6 +40,7 @@ public:
     SimType::RunMode type = SimType::Modified;
     int numThreads = (int)std::thread::hardware_concurrency();
     std::mutex accelMutex;
+    std::mutex storingPositionsMutex;
     bool useRK = true;
     bool showTraces = true;
     int RKStep = 1;
@@ -103,10 +104,11 @@ public:
                     UpdateObjects((dt) / substeps, type);
                     SolveDistanceConstraints();
                     timeElapsed += dt / substeps;
+                    seconds += dt / substeps;
 
-                    if (timeElapsed >= 60.0) {
+                    if (seconds >= 60.0) {
                         minutes += static_cast<int>(timeElapsed) / 60;
-                        timeElapsed = fmod(timeElapsed, 60.0); // Remainder after dividing by 60
+                        seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 
                         if (minutes >= 60) {
                             hours += minutes / 60;
@@ -149,7 +151,7 @@ public:
                     SolveDistanceConstraints();
                     timeElapsed += dt / substeps;
                     seconds += dt / substeps;
-                    if (timeElapsed >= 60.0) {
+                    if (seconds >= 60.0) {
                         minutes += static_cast<int>(seconds) / 60;
                         seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 
@@ -169,15 +171,15 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
-                        // Store positions and clear forces for all physics objects
-                        for (PhysicsObject* object : allObjects) {
+                        for (PhysicsObject* object : allObjects)
+                        {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                             object->ClearForce();
                         }
-
-                        // Adjust the next storage time based on positionStoreDelay and the time step
-                        double minStorageDelay = dt / substeps;
-                        nextStorageTime += std::max((double)positionStoreDelay, minStorageDelay);
+                        if (positionStoreDelay < dt / substeps) {
+                            nextStorageTime += dt / substeps;
+                        }
+                        else { nextStorageTime += positionStoreDelay; }
                     }
                     else {
                         for (PhysicsObject* object : allObjects)

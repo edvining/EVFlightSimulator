@@ -11,6 +11,7 @@ public:
 	triple a1, a2, a3, a4;
 	triple ExternalForces;
 	std::vector<triple> pastPositions;
+	std::vector<triple> pastPositionstemp;
 	PhysicsObject* referenceObject = nullptr;
 	const char* name;
 	double GPE;
@@ -28,8 +29,8 @@ public:
 	/// <param name="p"></param>
 	/// <param name="v"></param>
 	/// <param name="a"></param>
-	PhysicsObject(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : name(name), p(p), v(v), a(triple::zero()), m(m), radius(radius), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z }, contributesToGravity(contributesToGravSim), referenceObject(refObj) { /*pastPositions.push_back(p);*/ }
-	PhysicsObject() : name("Empty"), p(triple::zero()), v(triple::zero()), a(triple::zero()), m(10), radius(1), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z } {}
+	PhysicsObject(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : name(name), p(p), v(v), a(triple::zero()), m(m), radius(radius), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z }, contributesToGravity(contributesToGravSim), referenceObject(refObj) { pastPositions.push_back(p); }
+	PhysicsObject() : name("Empty"), p(triple::zero()), v(triple::zero()), a(triple::zero()), m(10), radius(1), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z } { pastPositions.push_back(p); }
 	triple GetPosition()
 	{
 		return p;
@@ -125,9 +126,10 @@ public:
 
 	void StoreCurrentPosition(int numberOfStoredPositions)
 	{
-		pastPositions.push_back(this->p);
-		if (pastPositions.size() > numberOfStoredPositions) {
-			pastPositions.erase(pastPositions.begin());
+		pastPositionstemp.push_back(this->p);
+		while (pastPositionstemp.size() > numberOfStoredPositions) {
+			pastPositionstemp.erase(pastPositionstemp.begin());
 		}
+		pastPositions = pastPositionstemp;
 	}
 };
