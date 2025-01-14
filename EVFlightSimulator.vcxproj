@@ -625,6 +625,8 @@
     <None Include="resource\glm\gtx\wrap.inl" />
     <None Include="res\shaders\shader.frag" />
     <None Include="res\shaders\shader.vert" />
+    <None Include="res\shaders\shaderFilled.frag" />
+    <None Include="res\shaders\shaderFilled.vert" />
     <None Include="res\shaders\shaderNew.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

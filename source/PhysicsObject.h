@@ -20,6 +20,8 @@ public:
 	float outputPosition[3];
 	bool firstIter = true;
 	bool contributesToGravity = true;
+	int index;
+	int referenceObjectIndex = 0;
 	std::mutex storingMutex;
 	/// <summary>
 	/// Mass, radius, position, velocity
@@ -126,10 +128,19 @@ public:
 
 	void StoreCurrentPosition(int numberOfStoredPositions)
 	{
-		pastPositionstemp.push_back(this->p);
-		while (pastPositionstemp.size() > numberOfStoredPositions) {
-			pastPositionstemp.erase(pastPositionstemp.begin());
+		storingMutex.lock();
+		pastPositions.push_back(this->p);
+		while (pastPositions.size() > numberOfStoredPositions) {
+			pastPositions.erase(pastPositions.begin());
 		}
-		pastPositions = pastPositionstemp;
+		storingMutex.unlock();
+	}
+
+	void SetReferenceObject(std::vector<PhysicsObject*> &allobjects) {
+		referenceObjectIndex = find(allobjects.begin(), allobjects.end(), referenceObject) - allobjects.begin(); 
+		if (referenceObject == nullptr) {
+			referenceObjectIndex = 0;
+		}
+		referenceObject = allobjects[referenceObjectIndex];
 	}
 };

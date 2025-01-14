@@ -109,7 +109,7 @@ void renderer::render() {
         timepoint start = clock1::now();
         timepoint timeSinceStart = clock1::now();
         Shader shader("res/shaders/shader.vert", "res/shaders/shader.frag");
-        Shader shader2("res/shaders/shader.vert", "res/shaders/shader.frag");
+        Shader shader2("res/shaders/shaderFilled.vert", "res/shaders/shaderFilled.frag");
         float r = 1.0f;
         float g = 1.0f;
         float b = 1.0f;
@@ -147,69 +147,71 @@ void renderer::render() {
             setMVPMatrix(shader2);
             
             if (linkedSim->showTraces) {
-                renderTrails(linkedSim, shader2);
+                renderTrailsLines(linkedSim, shader2);
             }
             renderSimulatorObjects(linkedSim, shader);
 
             renderImGui(linkedSim);
             // Handle mouse input (this part is unconventional to place here, usually in the render loop)
-            int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-            if (state == GLFW_PRESS)
-            {
-                if (mouseBTN1Held) {
-                    glfwGetCursorPos(window, &linkedSim->currentMouseX, &linkedSim->currentMouseY);
-                    linkedSim->deltaX = (linkedSim->currentMouseX - linkedSim->lastMouseX) * 2.0f;
-                    linkedSim->deltaY = (linkedSim->currentMouseY - linkedSim->lastMouseY) * 2.0f;
+            if (!ImGui::GetIO().WantCaptureMouse) {
+                int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+                if (state == GLFW_PRESS)
+                {
+                    if (mouseBTN1Held) {
+                        glfwGetCursorPos(window, &linkedSim->currentMouseX, &linkedSim->currentMouseY);
+                        linkedSim->deltaX = (linkedSim->currentMouseX - linkedSim->lastMouseX) * 2.0f;
+                        linkedSim->deltaY = (linkedSim->currentMouseY - linkedSim->lastMouseY) * 2.0f;
+                    }
+                    else {
+                        mouseBTN1Held = true;
+                        glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
+                    }
+                }
+                if (state == GLFW_RELEASE) {
+                    if (mouseBTN1Held) {
+                        linkedSim->viewPosX += linkedSim->deltaX * linkedSim->zoomLevel / scrHeight;
+                        linkedSim->viewPosY += -linkedSim->deltaY * linkedSim->zoomLevel / scrHeight;
+                        linkedSim->deltaX = 0;
+                        linkedSim->deltaY = 0;
+                    }
+                    mouseBTN1Held = false;
+                }
+
+                state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+                if (state == GLFW_PRESS)
+                {
+                    linkedSim->viewPosX = 0;
+                    linkedSim->viewPosY = 0;
+                }
+                state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE);
+                if (state == GLFW_PRESS) {
+                    if (mouseBTN2Held) {
+                        double currentMouseX, currentMouseY;
+                        glfwGetCursorPos(window, &currentMouseX, &currentMouseY);
+
+                        // Calculate the difference in mouse position
+                        double deltaX = (currentMouseX - linkedSim->lastMouseX);
+                        double deltaY = (currentMouseY - linkedSim->lastMouseY);
+
+                        // Adjust the camera rotation based on the mouse movement
+                        linkedSim->cameraRotationX += deltaY * 0.001f;  // Rotation around X-axis
+                        linkedSim->cameraRotationY += deltaX * 0.001f;  // Rotation around Y-axis
+                        if (linkedSim->cameraRotationX > 1.4f)
+                            linkedSim->cameraRotationX = 1.4f;
+                        if (linkedSim->cameraRotationX < -1.4f)
+                            linkedSim->cameraRotationX = -1.4f;
+                        // Store the current mouse position for the next frame
+                        linkedSim->lastMouseX = currentMouseX;
+                        linkedSim->lastMouseY = currentMouseY;
+                    }
+                    else {
+                        mouseBTN2Held = true;
+                        glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
+                    }
                 }
                 else {
-                    mouseBTN1Held = true;
-                    glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
+                    mouseBTN2Held = false;
                 }
-            }
-            if (state == GLFW_RELEASE) {
-                if (mouseBTN1Held) {
-                    linkedSim->viewPosX += linkedSim->deltaX * linkedSim->zoomLevel / scrHeight;
-                    linkedSim->viewPosY += -linkedSim->deltaY * linkedSim->zoomLevel / scrHeight;
-                    linkedSim->deltaX = 0;
-                    linkedSim->deltaY = 0;
-                }
-                mouseBTN1Held = false;
-            }
-
-            state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
-            if (state == GLFW_PRESS)
-            {
-                linkedSim->viewPosX = 0;
-                linkedSim->viewPosY = 0;
-            }
-            state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE);
-            if (state == GLFW_PRESS) {
-                if (mouseBTN2Held) {
-                    double currentMouseX, currentMouseY;
-                    glfwGetCursorPos(window, &currentMouseX, &currentMouseY);
-
-                    // Calculate the difference in mouse position
-                    double deltaX = (currentMouseX - linkedSim->lastMouseX);
-                    double deltaY = (currentMouseY - linkedSim->lastMouseY);
-
-                    // Adjust the camera rotation based on the mouse movement
-                    linkedSim->cameraRotationX += deltaY * 0.001f;  // Rotation around X-axis
-                    linkedSim->cameraRotationY += deltaX * 0.001f;  // Rotation around Y-axis
-                    if (linkedSim->cameraRotationX > 1.4f)
-                        linkedSim->cameraRotationX = 1.4f;
-                    if (linkedSim->cameraRotationX < -1.4f)
-                        linkedSim->cameraRotationX = -1.4f;
-                    // Store the current mouse position for the next frame
-                    linkedSim->lastMouseX = currentMouseX;
-                    linkedSim->lastMouseY = currentMouseY;
-                }
-                else {
-                    mouseBTN2Held = true;
-                    glfwGetCursorPos(window, &linkedSim->lastMouseX, &linkedSim->lastMouseY);
-                }
-            }
-            else {
-                mouseBTN2Held = false;
             }
             // Swap buffers
             glfwSwapBuffers(window);
@@ -393,14 +395,9 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
         ImGui::DragInt("Number of stored positions: ", &linkedSim->numberOfStoredPositions, 1, 1000);
         // Dropdown menu to select an object
         std::vector<PhysicsObject*> vec = linkedSim->allObjects;
-        static int selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
-        static int selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
-        if (selectedObjectIndex2 >= linkedSim->allObjects.size()) {
-            selectedObjectIndex2 = 0;
-        }
-        std::vector<std::string> objectNames; // Placeholder for object names
+        std::vector<std::string> objectNames;
         for (size_t i = 0; i < linkedSim->allObjects.size(); ++i) {
-            objectNames.push_back(linkedSim->allObjects[i]->name); // Generate names like "Object 1", "Object 2", etc.
+            objectNames.push_back(linkedSim->allObjects[i]->name);
         }
 
         // Convert names to a char* array (required by ImGui::Combo)
@@ -408,24 +405,35 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
         for (const auto& name : objectNames) {
             objectNamesCStr.push_back(name.c_str());
         }
-
+        static int selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
+        if (selectedObjectIndex >= vec.size()) {
+            selectedObjectIndex = 0;
+            linkedSim->selectedObject = linkedSim->allObjects[0];
+        }
+        static int selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+        if (selectedObjectIndex2 >= vec.size()) {
+            selectedObjectIndex2 = 0;
+        }
         // Render the dropdown
         if (ImGui::Combo("Select Object", &selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
             // Optional: Handle object selection changes
         }
 
         // Display the selected object's distance
-        if (linkedSim->allObjects.size() > selectedObjectIndex) {
-            linkedSim->selectedObject = linkedSim->allObjects[selectedObjectIndex];
-            linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
-            double distance = linkedSim->selectedObject->p.magnitude();
-            ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->allObjects[selectedObjectIndex]->p).magnitude(), (linkedSim->allObjects[selectedObjectIndex]->p).magnitude() / 9.461e15);
-            ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->allObjects[selectedObjectIndex]->v).magnitude(), (linkedSim->allObjects[selectedObjectIndex]->v).magnitude() / 299792458.0);
-        }
+        double distance = linkedSim->selectedObject->p.magnitude();
+        ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
+        ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude(), (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude() / 299792458.0);
+        
         // Render the dropdown
         if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
             // Optional: Handle object selection changes
         }
+        if(linkedSim->selectedObject != linkedSim->allObjects[selectedObjectIndex])
+        {
+            linkedSim->selectedObject = linkedSim->allObjects[selectedObjectIndex];
+            selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+        }
+        linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
     }
     /*ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
     ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
@@ -645,6 +653,150 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
                 indexBuffer.insert(indexBuffer.end(),
                     { baseIndex, baseIndex + 1, baseIndex + 2,
                       baseIndex + 2, baseIndex + 3, baseIndex });
+            }
+        }
+        simulator->allObjects[i]->storingMutex.unlock();
+    }
+
+    VertexArray va1;
+    VertexBuffer vb(positions3.data(), static_cast<int>(positions3.size() * sizeof(float)));
+    VertexBufferLayout layout;
+    layout.Push<float>(2);
+    layout.Push<float>(2);
+    va1.AddBuffer(vb, layout);
+    IndexBuffer ib1(indexBuffer.data(), static_cast<int>(indexBuffer.size()));
+
+    Draw(va1, ib1, shader, window);
+}
+
+void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
+    float screenHeightInv = 1.0f / scrHeight;
+    indexBuffer.clear();
+    positions3.clear();
+
+    centre[0] = simulator->viewPosX + ((simulator->deltaX) * simulator->zoomLevel * screenHeightInv);
+    centre[1] = simulator->viewPosY + ((-simulator->deltaY) * simulator->zoomLevel * screenHeightInv);
+
+    for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
+    {
+        simulator->allObjects[i]->storingMutex.lock();
+        if (!simulator->allObjects[i]->pastPositions.empty())
+        {
+            unsigned int baseIndex = positions3.size()/4;
+            
+            // Use current position as the end of the last segment.
+            triple currentPosition = simulator->allObjects[i]->p;
+           
+           for (unsigned int j = 0; j < simulator->allObjects[i]->pastPositions.size(); j++)
+            {
+                float _va1l = simulator->allObjects[i]->radius * 0.5f;
+                if (_va1l / simulator->zoomLevel < 1)
+                {
+                    _va1l = simulator->zoomLevel;
+                }
+
+                triple pastPosition1,pastPosition2, referencePosition1, referencePosition2, referenceCurrentPosition;
+                pastPosition1 = simulator->allObjects[i]->pastPositions[j];
+               
+               if(j == simulator->allObjects[i]->pastPositions.size() - 1)
+                {
+                    pastPosition2 = currentPosition;
+                }
+                else{
+                     pastPosition2 = simulator->allObjects[i]->pastPositions[j+1];
+                }
+
+                 if (simulator->referenceObject != nullptr)
+                {
+                   referencePosition1 = simulator->referenceObject->pastPositions[j];
+                   if(j == simulator->allObjects[i]->pastPositions.size() - 1)
+                   {
+                      referencePosition2 = simulator->referenceObject->p;
+                   }
+                   else
+                   {
+                        referencePosition2 = simulator->referenceObject->pastPositions[j + 1];
+                   }
+                    referenceCurrentPosition = simulator->referenceObject->p;
+                }
+                if (simulator->allObjects[i]->referenceObject != nullptr)
+                {
+                    referencePosition1 = simulator->allObjects[i]->referenceObject->pastPositions[j];
+                    if(j == simulator->allObjects[i]->pastPositions.size() - 1)
+                    {
+                        referencePosition2 = simulator->allObjects[i]->referenceObject->p;
+                    }
+                    else
+                    {
+                        referencePosition2 = simulator->allObjects[i]->referenceObject->pastPositions[j + 1];
+                    }
+
+                    referenceCurrentPosition = simulator->allObjects[i]->referenceObject->p;
+                }
+                 double objX1, objY1, objZ1, objX2, objY2, objZ2;
+                if (simulator->selectedObject == nullptr) {
+                    objX1 = (pastPosition1.x) - (referencePosition1.x) + referenceCurrentPosition.x;
+                    objY1 = (pastPosition1.y) - (referencePosition1.y) + referenceCurrentPosition.y;
+                    objZ1 = (pastPosition1.z) - (referencePosition1.z) + referenceCurrentPosition.z;
+                    objX2 = (pastPosition2.x) - (referencePosition2.x) + referenceCurrentPosition.x;
+                    objY2 = (pastPosition2.y) - (referencePosition2.y) + referenceCurrentPosition.y;
+                    objZ2 = (pastPosition2.z) - (referencePosition2.z) + referenceCurrentPosition.z;
+                }
+                else {
+                    objX1 = (pastPosition1.x) - (referencePosition1.x) + referenceCurrentPosition.x - (simulator->selectedObject->p.x);
+                    objY1 = (pastPosition1.y) - (referencePosition1.y) + referenceCurrentPosition.y - (simulator->selectedObject->p.y);
+                    objZ1 = (pastPosition1.z) - (referencePosition1.z) + referenceCurrentPosition.z - (simulator->selectedObject->p.z);
+                    objX2 = (pastPosition2.x) - (referencePosition2.x) + referenceCurrentPosition.x - (simulator->selectedObject->p.x);
+                    objY2 = (pastPosition2.y) - (referencePosition2.y) + referenceCurrentPosition.y - (simulator->selectedObject->p.y);
+                    objZ2 = (pastPosition2.z) - (referencePosition2.z) + referenceCurrentPosition.z - (simulator->selectedObject->p.z);
+                }
+                 // Apply camera rotation with Z as the up-down axis
+                // Yaw (Z-axis rotation)
+                double cosZ = (float)cos(simulator->cameraRotationY);
+                double sinZ = (float)sin(simulator->cameraRotationY);
+                double tempX1 = objX1 * cosZ - objY1 * sinZ;
+                double tempY1 = objX1 * sinZ + objY1 * cosZ;
+                double tempX2 = objX2 * cosZ - objY2 * sinZ;
+                double tempY2 = objX2 * sinZ + objY2 * cosZ;
+
+                // Pitch (X-axis rotation)
+                float cosX = (float)cos(simulator->cameraRotationX);
+                float sinX = (float)sin(simulator->cameraRotationX);
+                float finalY1 = (float)(tempY1 * cosX - objZ1 * sinX);
+                float finalZ1 = (float)(tempY1 * sinX + objZ1 * cosX + centre[1] * scrHeight);
+                float finalX1 = (float)(tempX1 + centre[0] * scrHeight);
+                float finalY2 = (float)(tempY2 * cosX - objZ2 * sinX);
+                float finalZ2 = (float)(tempY2 * sinX + objZ2 * cosX + centre[1] * scrHeight);
+                float finalX2 = (float)(tempX2 + centre[0] * scrHeight);
+
+                // Calculate the vector from position 1 to 2
+                float dx = finalX2 - finalX1;
+                float dz = finalZ2 - finalZ1;
+
+                // Calculate normalized direction vector
+                float length = std::sqrt(dx * dx + dz * dz);
+                if (length > 0.0001f)
+                {
+                    dx /= length;
+                    dz /= length;
+                }
+                // Calculate perpendicular vector
+                float px = -dz * _va1l;
+                float pz = dx * _va1l;
+
+                 // Generate the four vertices of the quad (two per point)
+                positions3.insert(positions3.end(), {
+                    (finalX1 + px) * screenHeightInv, (finalZ1 + pz) * screenHeightInv, 0.0f, 0.0f,  // Vertex 1
+                    (finalX1 - px) * screenHeightInv, (finalZ1 - pz) * screenHeightInv, 1.0f, 0.0f, // Vertex 2
+                    (finalX2 - px) * screenHeightInv, (finalZ2 - pz) * screenHeightInv, 1.0f, 1.0f,  // Vertex 3
+                    (finalX2 + px) * screenHeightInv, (finalZ2 + pz) * screenHeightInv, 0.0f, 1.0f,   // Vertex 4
+                });
+
+                // Add indices for the quad
+                indexBuffer.insert(indexBuffer.end(),
+                    { baseIndex + j * 4, baseIndex + j * 4 + 1, baseIndex + j * 4 + 2,
+                        baseIndex + j * 4 + 2, baseIndex + j * 4 + 3, baseIndex + j * 4 });
+
             }
         }
         simulator->allObjects[i]->storingMutex.unlock();

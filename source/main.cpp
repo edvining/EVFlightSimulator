@@ -25,7 +25,7 @@
 #include <future>
 
 using application = renderer;
-float minimumdt = 1.0f/1000000000000000.0f;
+float minimumdt = 1.0f/50000000000000000.0f;
 
 bool paused = false;
 
@@ -62,6 +62,9 @@ void LotsOfBalls() {
     simulator.storingPositions = true;
     /*simulator.startThreads(16);*/
     simulator.cameraRotationX = 0.0f;
+    PhysicsObject sun("Sun", 1988500e24f, 695700000.0f, { -1.009146052453886E+09, -6.342248515004860E+08, 2.918025134412420E+07 },
+        { 1.102867590529470E+01, -8.970075624225537, -1.590822813779761E-01 });
+    simulator.AddObject(&sun);
     PhysicsObject earth("Earth", 5.97219e24f, 6378137, { 1.001221085597017E+11, -1.138184590187444E+11, 3.459909583488852E+07 },
         /*{ 0, 0, 0 }*/{ 2.174985495402457E+04, 1.973326349215320E+04, -9.113292098188452E-01 });
     simulator.AddObject(&earth);
@@ -73,9 +76,6 @@ void LotsOfBalls() {
     PhysicsObject moon("Moon", 7.349e22f, 1737530.0f, { 9.988829984389585E+10, -1.135011116884250E+11, 6.536801629186422E+07 },
         { 2.092295035930196E+04, 1.917371149264998E+04, -4.031214427303542E+01 });
     simulator.AddObject(&moon);
-    PhysicsObject sun("Sun", 1988500e24f, 695700000.0f, { -1.009146052453886E+09, -6.342248515004860E+08, 2.918025134412420E+07 },
-        { 1.102867590529470E+01, -8.970075624225537, -1.590822813779761E-01 });
-    simulator.AddObject(&sun);
     PhysicsObject mars("Mars", 6.4171e23f, 3389920.0f, { 1.838132282343054E+11, 1.077250455786663E+11, -2.233343150142968E+09 },
         { -1.132073342589737E+04, 2.296074025888803E+04, 7.591572611068891E+02 });
     simulator.AddObject(&mars);
@@ -97,9 +97,9 @@ void LotsOfBalls() {
         1000 * triple{ 3.351857209931528E+00,  8.822830821269344E+00, -2.872934017773172E-01 });
     simulator.AddObject(&saturn);
     std::vector<PhysicsObject*> generatedObjs;
-    for (int i = 0; i < 3; i++) {
-        double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(10.0 * i) + earth.radius+400000.0));
-        generatedObjs.push_back(new PhysicsObject("Empty", 10, 2, earth.p + triple((10.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV+(0.001*i), 0), false, &sun));
+    for (int i = 0; i < 400; i++) {
+        double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * i) + earth.radius+400000.0));
+        generatedObjs.push_back(new PhysicsObject("Empty", 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false , &sun));
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
         simulator.AddObject(generatedObjs[i]);
@@ -107,11 +107,15 @@ void LotsOfBalls() {
     simulator.selectedObject = &earth;
     simulator.referenceObject = &sun;
     moon.referenceObject = &earth;
-    earth.referenceObject = nullptr;
-    sun.referenceObject = nullptr;
-    simulator.positionStoreDelay = 10;
+    earth.referenceObject = &sun;
+    sun.referenceObject = &sun;
+    simulator.positionStoreDelay = 1;
     simulator.useRK = true;
-    simulator.numberOfStoredPositions = 100;
+    simulator.numberOfStoredPositions = 0;
+    simulator.SetReferenceObjects();
+    while (!simulator.finished) {
+
+    }
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
 
@@ -210,6 +214,47 @@ void LotsOfGravObjs() {
     simulator.useRK = true;
     simulator.positionStoreDelay = 1;
     simulator.numberOfStoredPositions = 100;
+    simulator.SetReferenceObjects();
+    // Link the simulator to the visualiser app
+    app1.linkSimulator(&simulator);
+
+    // Start simulator thread
+    std::thread simulatorThread(RunSim, &simulator, &app1);
+
+    // Run the application (rendering)
+    app1.run();
+
+    // Wait for the simulator thread to finish
+    simulatorThread.join();
+}
+
+void GridOfParticles() {
+    // Initialise application
+    application app1("OpenGL", 4, 6);
+
+    // Initialise simulator and objects
+    GravitySimulator simulator;
+    int size = 10;
+    std::vector<PhysicsObject*> generatedObjs;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            for (int k = 0; k < size; k++)
+            {
+                generatedObjs.push_back(new PhysicsObject("Empty", 10e24f, 1000000.0f, triple((double)(10000000.0f * i - 5000000.0f), (double)(10000000.0f * j - 5000000.0f), (double)(10000000.0f * k - 5000000.0f)), triple(0, 0, 0), true));
+            }
+        }
+    }
+    for (int i = 0; i < generatedObjs.size(); i++) {
+        simulator.AddObject(generatedObjs[i]);
+    }
+    simulator.zoomLevel = 69570000.0f;
+    simulator.showTraces = true;
+    simulator.storingPositions = true;
+    simulator.useRK = true;
+    simulator.paused = false;
+    simulator.positionStoreDelay = 1;
+    simulator.numberOfStoredPositions = 0;
+    simulator.SetReferenceObjects();
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
 
@@ -224,6 +269,6 @@ void LotsOfGravObjs() {
 }
 
 int main() {
-    LotsOfBalls();
+    GridOfParticles();
 	return 0;
 }

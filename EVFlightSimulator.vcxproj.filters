@@ -1430,8 +1430,10 @@
     <None Include="resource\glm\gtx\wrap.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="res\shaders\shaderFilled.frag" />
+    <None Include="res\shaders\shaderFilled.vert" />
+    <None Include="res\shaders\shaderNew.frag" />
     <None Include="res\shaders\shader.frag" />
     <None Include="res\shaders\shader.vert" />
-    <None Include="res\shaders\shaderNew.frag" />
   </ItemGroup>
 </Project>

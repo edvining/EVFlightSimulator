@@ -25,6 +25,7 @@ private:
     bool stop = false;
     std::vector<std::thread> threads;
 public:
+    bool finished = false;
     static constexpr double G = 6.67e-11;
     static constexpr double LIGHTSPEED = 3e+8;
     std::vector<PhysicsObject*> allObjects;
@@ -32,6 +33,7 @@ public:
     std::vector<PhysicsObject*> physicsObjects;
     PhysicsObject* selectedObject;
     PhysicsObject* referenceObject;
+    int selectedObjectIndex;
     double timeElapsed = 0;
     int years = 0, days = 0, hours = 0, minutes = 0;
     double seconds = 0.0;
@@ -59,6 +61,7 @@ public:
     bool paused = false;
     bool storingPositions = false;
     int numberOfStoredPositions = 1000;
+    int currentObjectIndex = 0;
 
     void RKSimStep(double dt)
     {
@@ -86,8 +89,9 @@ public:
     {
         if(!paused)
         {
-            if(selectedObject == nullptr){}
-            else { ResetUniverseOrigin(selectedObject); }
+            SetReferenceObjects();
+            /*if(selectedObject == nullptr){}
+            else { ResetUniverseOrigin(selectedObject); }*/
             double dt = timeWarp * inputdt;
             myDt = inputdt;
             for (int i = 0; i < substeps; i++)
@@ -802,6 +806,7 @@ public:
         else {
             physicsObjects.push_back(object);
         }
+        object->index = currentObjectIndex++;
         allObjects.push_back(object);
     }
 
@@ -901,4 +906,16 @@ public:
         threads.clear();
     }
 
+    void SetReferenceObjects()
+    {
+        selectedObjectIndex = find(allObjects.begin(), allObjects.end(), selectedObject) - allObjects.begin();
+        for (PhysicsObject* object : allObjects)
+        {
+            object->SetReferenceObject(allObjects);
+            if (object->referenceObject == nullptr) {
+                object->referenceObject = allObjects[0];
+            }
+        }
+        finished = true;
+    }
 };
