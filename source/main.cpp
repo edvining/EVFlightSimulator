@@ -234,20 +234,63 @@ void GridOfParticles() {
 
     // Initialise simulator and objects
     GravitySimulator simulator;
-    int size = 10;
+    int size = 5;
     std::vector<PhysicsObject*> generatedObjs;
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
             for (int k = 0; k < size; k++)
             {
-                generatedObjs.push_back(new PhysicsObject("Empty", 10e24f, 1000000.0f, triple((double)(10000000.0f * i - 5000000.0f), (double)(10000000.0f * j - 5000000.0f), (double)(10000000.0f * k - 5000000.0f)), triple(0, 0, 0), true));
+                generatedObjs.push_back(new PhysicsObject("Empty", 10e10f, 1, triple((double)(1.0f * i - 0.5f*size), (double)(1.0f * j - 0.5f *size), (double)(1.0f * k - 0.5f *size)), triple(0, 0, 0), true));
+            }
+        }
+    }
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            for (int k = 0; k < size; k++)
+            {
+                generatedObjs.push_back(new PhysicsObject("Empty", 10e10f, 1, triple((double)(1.0f * i - 0.5f *size), (double)(1.0f * j - 0.5f *size)+ 50* 0.5f * size, (double)(1.0f * k - 0.5f *size)), triple(2.5, 0, 0), true));
             }
         }
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
         simulator.AddObject(generatedObjs[i]);
     }
-    simulator.zoomLevel = 69570000.0f;
+    simulator.zoomLevel = 1.0f;
+    simulator.showTraces = true;
+    simulator.storingPositions = true;
+    simulator.useRK = true;
+    simulator.paused = false;
+    simulator.positionStoreDelay = 1;
+    simulator.numberOfStoredPositions = 0;
+    simulator.SetReferenceObjects();
+    // Link the simulator to the visualiser app
+    app1.linkSimulator(&simulator);
+
+    // Start simulator thread
+    std::thread simulatorThread(RunSim, &simulator, &app1);
+
+    // Run the application (rendering)
+    app1.run();
+
+    // Wait for the simulator thread to finish
+    simulatorThread.join();
+}
+
+void TestThreeBody() {
+    // Initialise application
+    application app1("OpenGL", 4, 6);
+
+    // Initialise simulator and objects
+    GravitySimulator simulator;
+    int size = 5;
+    std::vector<PhysicsObject*> generatedObjs;
+    generatedObjs.push_back(new PhysicsObject("Empty", 10e10f, 1, triple(10, 0, 0), triple(0, 1, 0), true));
+    generatedObjs.push_back(new PhysicsObject("Empty", 10e10f, 1, triple(0, 10, 0), triple(-1, 0, 0), true));
+    generatedObjs.push_back(new PhysicsObject("Empty", 10e10f, 1, triple(10, 10, 0), triple(0, 0, 1), true));
+    for (int i = 0; i < generatedObjs.size(); i++) {
+        simulator.AddObject(generatedObjs[i]);
+    }
+    simulator.zoomLevel = 0.1f;
     simulator.showTraces = true;
     simulator.storingPositions = true;
     simulator.useRK = true;
@@ -269,6 +312,6 @@ void GridOfParticles() {
 }
 
 int main() {
-    GridOfParticles();
+    TestThreeBody();
 	return 0;
 }

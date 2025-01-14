@@ -434,11 +434,34 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
         }
         linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
+        
+        // Adding energy and momentum readouts
+        
+        /*float totalEnergy = 0;
+        triple totalEnergyVector;
+        for (int i = 0; i < linkedSim->allObjects.size(); i++) {
+            totalEnergyVector += linkedSim->allObjects[i]->m * linkedSim->allObjects[i]->v;
+        }
+        totalEnergy = totalEnergyVector.magnitudef();
+        ImGui::Text("Total Momentum: %.5f J", totalEnergy);
+        totalEnergy = 0;
+        for (int i = 0; i < linkedSim->allObjects.size(); i++) {
+            totalEnergy += 0.5 * linkedSim->allObjects[i]->m * linkedSim->allObjects[i]->v * linkedSim->allObjects[i]->v;
+            for (int j = 0; j < linkedSim->allObjects.size(); j++) {
+                if (i == j) {
+                    continue;
+                }
+                float distance1 = (linkedSim->allObjects[i]->p - linkedSim->allObjects[j]->p).magnitudef();
+                totalEnergy -= (linkedSim->G * linkedSim->allObjects[i]->m * linkedSim->allObjects[j]->m) / distance1;
+            }
+        }
+        ImGui::Text("Total Kinetic Energy: %.5f J", totalEnergy);*/
     }
     /*ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
     ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
     ImGui::Text("Angle: %.2f° %.2f°", linkedSim->cameraRotationX, linkedSim->cameraRotationY);
     ImGui::Text("Position: %.2f° %.2f°", linkedSim->viewPosX, linkedSim->viewPosY);*/
+   
     ImGui::End();
 
     // Render ImGui frame
