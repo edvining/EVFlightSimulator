@@ -13,7 +13,7 @@ public:
 	std::vector<triple> pastPositions;
 	std::vector<triple> pastPositionstemp;
 	PhysicsObject* referenceObject = nullptr;
-	const char* name;
+	const std::string name;
 	double GPE;
 	double m;
 	float radius;

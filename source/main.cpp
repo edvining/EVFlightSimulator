@@ -47,10 +47,12 @@ void RunSim(GravitySimulator* sim, application* app) {
 	}
 }
 
+
+
 void LotsOfBalls() {
     // Initialise application
     application app1("OpenGL", 4, 6);
-
+    app1.renderingMethod = RenderingMethod::SingleThreading;
     // Initialise simulator and objects
     GravitySimulator simulator;
     simulator.zoomLevel = /*0.01f;*/ 63781.37f; // metres / pixel7
@@ -97,36 +99,46 @@ void LotsOfBalls() {
         1000 * triple{ 3.351857209931528E+00,  8.822830821269344E+00, -2.872934017773172E-01 });
     simulator.AddObject(&saturn);
     std::vector<PhysicsObject*> generatedObjs;
-    for (int i = 0; i < 400; i++) {
+   /* for (int i = 0; i < 400; i++) {
         double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * i) + earth.radius+400000.0));
-        generatedObjs.push_back(new PhysicsObject("Empty", 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false , &sun));
+        std::cout << "Hi there, generating: Empty " << i << "Naming it: " << std::format("Empty {}", i).c_str() << std::endl;
+        const char* string = std::format("Empty {}", i).c_str();
+        std::cout << "String: " << string << std::endl;
+        generatedObjs.push_back(new PhysicsObject(string, 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false, &earth));
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
         simulator.AddObject(generatedObjs[i]);
-    }
+    }*/
+    std::string string = std::format("Empty {}", 284);
+    double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * 284) + earth.radius + 400000.0));
+    generatedObjs.push_back(new PhysicsObject(string.c_str(), 5, 40000.0, earth.p + triple((1000000.0 * 284) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * 284), 0), false, &earth));
+    simulator.AddObject(generatedObjs[0]);
     simulator.selectedObject = &earth;
     simulator.referenceObject = &sun;
     moon.referenceObject = &earth;
     earth.referenceObject = &sun;
     sun.referenceObject = &sun;
-    simulator.positionStoreDelay = 1;
+    simulator.positionStoreDelay = 1000;
     simulator.useRK = true;
-    simulator.numberOfStoredPositions = 0;
+    simulator.numberOfStoredPositions = 1000;
     simulator.SetReferenceObjects();
-    while (!simulator.finished) {
-
-    }
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
+    if(app1.renderingMethod == RenderingMethod::MultiThreading)
+    {
+        // Start simulator thread
+        std::thread simulatorThread(RunSim, &simulator, &app1);
 
-    // Start simulator thread
-    std::thread simulatorThread(RunSim, &simulator, &app1);
+        // Run the application (rendering)
+        app1.run();
 
-    // Run the application (rendering)
-    app1.run();
+        // Wait for the simulator thread to finish
+        simulatorThread.join();
+    }
+    else {
+        app1.run();
 
-    // Wait for the simulator thread to finish
-    simulatorThread.join();
+    }
 
 }
 
@@ -312,6 +324,6 @@ void TestThreeBody() {
 }
 
 int main() {
-    TestThreeBody();
+    LotsOfBalls();
 	return 0;
 }

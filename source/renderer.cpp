@@ -234,7 +234,7 @@ void renderer::rendernonmt() {
         timepoint start = clock1::now();
         timepoint timeSinceStart = clock1::now();
         Shader shader("res/shaders/shader.vert", "res/shaders/shader.frag");
-        Shader shader2("res/shaders/shader.vert", "res/shaders/shader.frag");
+        Shader shader2("res/shaders/shaderFilled.vert", "res/shaders/shaderFilled.frag");
         float r = 1.0f;
         float g = 1.0f;
         float b = 1.0f;
@@ -271,7 +271,7 @@ void renderer::rendernonmt() {
             setMVPMatrix(shader2);
 
             if (linkedSim->showTraces) {
-                renderTrails(linkedSim, shader2);
+                renderTrailsLines(linkedSim, shader2);
             }
             renderSimulatorObjects(linkedSim, shader);
 
@@ -338,7 +338,7 @@ void renderer::rendernonmt() {
             }
             // Swap buffers
             glfwSwapBuffers(window);
-            glfwPollEvents();
+            linkedSim->RunSimulation(1.0f/ ImGui::GetIO().Framerate, linkedSim->substeps);
         }
 
     }
@@ -471,16 +471,28 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
 
 void renderer::run() {
     running = true;
-    // Start rendering in a separate thread
-    renderThread = std::thread(&renderer::render, this); 
-    // Poll events on the main thread
-    pollEvents();
+    if (renderingMethod == RenderingMethod::SingleThreading) {
+        // Start rendering in a separate thread
+        renderThread = std::thread(&renderer::rendernonmt, this);
+        // Poll events on the main thread
+        pollEvents();
 
-    // Wait for render thread to finish
-    if (renderThread.joinable()) {
-        renderThread.join();
+        // Wait for render thread to finish
+        if (renderThread.joinable()) {
+            renderThread.join();
+        }
     }
-    
+    else {
+        // Start rendering in a separate thread
+        renderThread = std::thread(&renderer::render, this);
+        // Poll events on the main thread
+        pollEvents();
+
+        // Wait for render thread to finish
+        if (renderThread.joinable()) {
+            renderThread.join();
+        }
+    }
     glfwTerminate();  // Terminate GLFW only after render thread finishes
 }
 

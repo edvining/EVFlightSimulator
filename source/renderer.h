@@ -19,7 +19,7 @@ bool GLLogCall(const char* function, const char* file, int line);
 using timepoint = std::chrono::high_resolution_clock::time_point;
 using clock1 = std::chrono::high_resolution_clock;
 using duration = std::chrono::high_resolution_clock::duration;
-
+enum RenderingMethod { SingleThreading, MultiThreading };
 class renderer {
 public:
     GLFWwindow* window = nullptr;
@@ -49,6 +49,7 @@ public:
     bool mouseBTN2Held = false;
     double centre[2] = { 0.0, 0.0 };
     bool VSYNC = false;
+    RenderingMethod renderingMethod = RenderingMethod::MultiThreading;
 
     renderer();
     renderer(const char* title);
