@@ -79,7 +79,7 @@ public:
 	{
 		this->p1 = this->p;
 		double dtOver2 = dt * 0.5f;
-		this->p2 = this->p1 + this->v * dtOver2 + 0.5f * this->a1 * dtOver2 * dtOver2;
+		this->p2 = this->p1 + this->v * dt + 0.5f * this->a1 * dt * dt;
 	}
 
 	void RK4Step2(double dt)
@@ -90,7 +90,8 @@ public:
 
 	void RK4Step3(double dt)
 	{
-		this->p4 = this->p1 + this->v * dt + 0.5f * this->a3 * dt * dt;
+		double dtOver2 = dt * 0.5f;
+		this->p4 = this->p1 + this->v * dtOver2 + 0.5f * this->a3 * dtOver2 * dtOver2;
 	}
 
 	void RK4Step4(double dt)
@@ -99,7 +100,7 @@ public:
 		triple a2 = this->a2;
 		triple a3 = this->a3;
 		triple a4 = this->a4;
-		this->a = (a1 + (2 * a2) + (2 * a3) + a4) / 6;
+		this->a = (a1 + (2 * a4) + (2 * a3) + a2) / 6;
 		this->p = this->p + this->v * dt + 0.5f * this->a * dt * dt;
 		this->v = this->v + this->a * dt;
 		if (this->v.magnitude() > c) {
