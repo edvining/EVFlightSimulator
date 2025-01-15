@@ -52,7 +52,7 @@ void RunSim(GravitySimulator* sim, application* app) {
 void LotsOfBalls() {
     // Initialise application
     application app1("OpenGL", 4, 6);
-    app1.renderingMethod = RenderingMethod::SingleThreading;
+    app1.renderingMethod = RenderingMethod::MultiThreading;
     // Initialise simulator and objects
     GravitySimulator simulator;
     simulator.zoomLevel = /*0.01f;*/ 63781.37f; // metres / pixel7

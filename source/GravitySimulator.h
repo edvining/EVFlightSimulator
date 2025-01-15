@@ -90,8 +90,7 @@ public:
         if(!paused)
         {
             SetReferenceObjects();
-            /*if(selectedObject == nullptr){}
-            else { ResetUniverseOrigin(selectedObject); }*/
+            
             double dt = timeWarp * inputdt;
             myDt = inputdt;
             for (int i = 0; i < substeps; i++)
@@ -130,10 +129,12 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
+                        storingPositionsMutex.lock();
                         for (PhysicsObject* object : allObjects)
                         {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                         }
+                        storingPositionsMutex.unlock();
                         if (positionStoreDelay < dt / substeps) {
                             nextStorageTime += dt / substeps;
                         }
@@ -175,11 +176,13 @@ public:
                         }
                     }
                     if (timeElapsed > nextStorageTime && storingPositions) {
+                        storingPositionsMutex.lock();
                         for (PhysicsObject* object : allObjects)
                         {
                             object->StoreCurrentPosition(numberOfStoredPositions);
                             object->ClearForce();
                         }
+                        storingPositionsMutex.unlock();
                         if (positionStoreDelay < dt / substeps) {
                             nextStorageTime += dt / substeps;
                         }

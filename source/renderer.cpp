@@ -712,9 +712,9 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
     centre[0] = simulator->viewPosX + ((simulator->deltaX) * simulator->zoomLevel * screenHeightInv);
     centre[1] = simulator->viewPosY + ((-simulator->deltaY) * simulator->zoomLevel * screenHeightInv);
 
+    simulator->storingPositionsMutex.lock();
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
-        simulator->allObjects[i]->storingMutex.lock();
         if (!simulator->allObjects[i]->pastPositions.empty())
         {
             unsigned int baseIndex = positions3.size()/4;
@@ -834,9 +834,9 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
 
             }
         }
-        simulator->allObjects[i]->storingMutex.unlock();
+        
     }
-
+    simulator->storingPositionsMutex.unlock();
     VertexArray va1;
     VertexBuffer vb(positions3.data(), static_cast<int>(positions3.size() * sizeof(float)));
     VertexBufferLayout layout;
