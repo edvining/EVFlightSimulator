@@ -49,6 +49,8 @@ public:
     bool mouseBTN2Held = false;
     double centre[2] = { 0.0, 0.0 };
     bool VSYNC = false;
+    bool showControls = true;
+    bool missionData = false;
     RenderingMethod renderingMethod = RenderingMethod::MultiThreading;
 
     renderer();

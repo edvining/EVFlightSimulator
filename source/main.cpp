@@ -59,7 +59,7 @@ void LotsOfBalls() {
     simulator.timeWarp = 1;
     simulator.substeps = 1;
     simulator.type = SimType::SingleThreaded;
-    simulator.useRK = true;
+    simulator.useRK = false;
     simulator.showTraces = true;
     simulator.storingPositions = true;
     /*simulator.startThreads(16);*/

@@ -108,9 +108,8 @@ public:
                     SolveDistanceConstraints();
                     timeElapsed += dt / substeps;
                     seconds += dt / substeps;
-
                     if (seconds >= 60.0) {
-                        minutes += static_cast<int>(timeElapsed) / 60;
+                        minutes += static_cast<int>(seconds) / 60;
                         seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 
                         if (minutes >= 60) {

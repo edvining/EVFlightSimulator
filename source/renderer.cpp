@@ -368,101 +368,121 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    // Render ImGui debug window
-    ImGui::Begin("ImGui Debugger");
-    ImGui::Text("Frametime %.10fms (%.1fFPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);  // Access io correctly
-    if (linkedSim != nullptr) {
-        ImGui::Text("Linked Simulator dt: %.10fms (%.1fHz)", linkedSim->myDt * 1000.0, 1.0 / linkedSim->myDt);
-        /*float position[3] = { linkedSim->allObjects[0]->p.x, linkedSim->allObjects[0]->p.y, linkedSim->allObjects[0]->p.z };
-        ImGui::SliderFloat3("Earth Location: ", position, 0, 10000);*/
-        int years = linkedSim->years;
-        int days = linkedSim->days;
-        int hrs = linkedSim->hours;
-        int mins = linkedSim->minutes;
-        double secs = linkedSim->seconds;
-        if (years < 1) {
-            ImGui::Text("Elapsed Time: %i days %02i:%02i:%06.3f", days, hrs, mins, secs);
-        }
-        else if (years == 1) {
-            ImGui::Text("Elapsed Time: %i year %i days %02i:%02i:%06.3f", years, days, hrs, mins, secs);
-        }
-        else {
-            ImGui::Text("Elapsed Time: %i years %i days %02i:%02i:%06.3f", years, days, hrs, mins, secs);
-        }
-        ImGui::Text("Delta T: %.5fs", (linkedSim->timeWarp * linkedSim->myDt) / linkedSim->substeps);
-        ImGui::Text("Substeps: %i", linkedSim->substeps);
-        ImGui::DragFloat("Position store Delay: ", &linkedSim->positionStoreDelay, 0.01f, 100.0f);
-        ImGui::DragInt("Number of stored positions: ", &linkedSim->numberOfStoredPositions, 1, 1000);
-        // Dropdown menu to select an object
-        std::vector<PhysicsObject*> vec = linkedSim->allObjects;
-        std::vector<std::string> objectNames;
-        for (size_t i = 0; i < linkedSim->allObjects.size(); ++i) {
-            objectNames.push_back(linkedSim->allObjects[i]->name);
-        }
-
-        // Convert names to a char* array (required by ImGui::Combo)
-        std::vector<const char*> objectNamesCStr;
-        for (const auto& name : objectNames) {
-            objectNamesCStr.push_back(name.c_str());
-        }
-        static int selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
-        if (selectedObjectIndex >= vec.size()) {
-            selectedObjectIndex = 0;
-            linkedSim->selectedObject = linkedSim->allObjects[0];
-        }
-        static int selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
-        if (selectedObjectIndex2 >= vec.size()) {
-            selectedObjectIndex2 = 0;
-        }
-        // Render the dropdown
-        if (ImGui::Combo("Select Object", &selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
-            // Optional: Handle object selection changes
-        }
-
-        // Display the selected object's distance
-        double distance = linkedSim->selectedObject->p.magnitude();
-        ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
-        ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude(), (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude() / 299792458.0);
-        
-        // Render the dropdown
-        if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
-            // Optional: Handle object selection changes
-        }
-        if(linkedSim->selectedObject != linkedSim->allObjects[selectedObjectIndex])
-        {
-            linkedSim->selectedObject = linkedSim->allObjects[selectedObjectIndex];
-            selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
-        }
-        linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
-        
-        // Adding energy and momentum readouts
-        
-        /*float totalEnergy = 0;
-        triple totalEnergyVector;
-        for (int i = 0; i < linkedSim->allObjects.size(); i++) {
-            totalEnergyVector += linkedSim->allObjects[i]->m * linkedSim->allObjects[i]->v;
-        }
-        totalEnergy = totalEnergyVector.magnitudef();
-        ImGui::Text("Total Momentum: %.5f J", totalEnergy);
-        totalEnergy = 0;
-        for (int i = 0; i < linkedSim->allObjects.size(); i++) {
-            totalEnergy += 0.5 * linkedSim->allObjects[i]->m * linkedSim->allObjects[i]->v * linkedSim->allObjects[i]->v;
-            for (int j = 0; j < linkedSim->allObjects.size(); j++) {
-                if (i == j) {
-                    continue;
-                }
-                float distance1 = (linkedSim->allObjects[i]->p - linkedSim->allObjects[j]->p).magnitudef();
-                totalEnergy -= (linkedSim->G * linkedSim->allObjects[i]->m * linkedSim->allObjects[j]->m) / distance1;
+    if(missionData)
+    {
+        // Render ImGui debug window
+        ImGui::Begin("Mission Data");
+        ImGui::Checkbox("Show Controls List:", &showControls);
+        ImGui::Text("Frametime %.10fms (%.1fFPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);  // Access io correctly
+        if (linkedSim != nullptr) {
+            ImGui::Text("Linked Simulator dt: %.10fms (%.1fHz)", linkedSim->myDt * 1000.0, 1.0 / linkedSim->myDt);
+            /*float position[3] = { linkedSim->allObjects[0]->p.x, linkedSim->allObjects[0]->p.y, linkedSim->allObjects[0]->p.z };
+            ImGui::SliderFloat3("Earth Location: ", position, 0, 10000);*/
+            int years = linkedSim->years;
+            int days = linkedSim->days;
+            int hrs = linkedSim->hours;
+            int mins = linkedSim->minutes;
+            double secs = linkedSim->seconds;
+            if (years < 1) {
+                ImGui::Text("Elapsed Time: %i days %02i:%02i:%06.3f (Timewarp %.0fx)", days, hrs, mins, secs, linkedSim->timeWarp);
             }
+            else if (years == 1) {
+                ImGui::Text("Elapsed Time: %i year %i days %02i:%02i:%06.3f (Timewarp %.0fx)", years, days, hrs, mins, secs, linkedSim->timeWarp);
+            }
+            else {
+                ImGui::Text("Elapsed Time: %i years %i days %02i:%02i:%06.3f (Timewarp %.0fx)", years, days, hrs, mins, secs, linkedSim->timeWarp);
+            }
+            ImGui::Text("Simulator Delta T: %.5fs", (linkedSim->timeWarp * linkedSim->myDt) / linkedSim->substeps);
+            ImGui::Text("Substeps: %i", linkedSim->substeps);
+            ImGui::DragFloat("Position store Delay: ", &linkedSim->positionStoreDelay, 0.01f, 100.0f);
+            ImGui::DragInt("Number of stored positions: ", &linkedSim->numberOfStoredPositions, 1, 1000);
+            ImGui::Checkbox("Use Runge-Kutta 4th order method: ", &linkedSim->useRK);
+            // Dropdown menu to select an object
+            std::vector<PhysicsObject*> vec = linkedSim->allObjects;
+            std::vector<std::string> objectNames;
+            for (size_t i = 0; i < linkedSim->allObjects.size(); ++i) {
+                objectNames.push_back(linkedSim->allObjects[i]->name);
+            }
+
+            // Convert names to a char* array (required by ImGui::Combo)
+            std::vector<const char*> objectNamesCStr;
+            for (const auto& name : objectNames) {
+                objectNamesCStr.push_back(name.c_str());
+            }
+            linkedSim->selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
+            if (linkedSim->selectedObjectIndex >= vec.size()) {
+                linkedSim->selectedObjectIndex = 0;
+                linkedSim->selectedObject = linkedSim->allObjects[0];
+            }
+            static int selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+            if (selectedObjectIndex2 >= vec.size()) {
+                selectedObjectIndex2 = 0;
+            }
+            // Render the dropdown
+            if (ImGui::Combo("Select Object", &linkedSim->selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
+                // Optional: Handle object selection changes
+            }
+
+            // Display the selected object's distance
+            double distance = linkedSim->selectedObject->p.magnitude();
+            ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
+            ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude(), (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude() / 299792458.0);
+
+            // Render the dropdown
+            if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
+                // Optional: Handle object selection changes
+            }
+            if (linkedSim->selectedObject != linkedSim->allObjects[linkedSim->selectedObjectIndex])
+            {
+                linkedSim->selectedObject = linkedSim->allObjects[linkedSim->selectedObjectIndex];
+                selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+            }
+            linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
+
+            // Adding energy and momentum readouts
+
+            /*float totalEnergy = 0;
+            triple totalEnergyVector;
+            for (int i = 0; i < linkedSim->allObjects.size(); i++) {
+                totalEnergyVector += linkedSim->allObjects[i]->m * linkedSim->allObjects[i]->v;
+            }
+            totalEnergy = totalEnergyVector.magnitudef();
+            ImGui::Text("Total Momentum: %.5f J", totalEnergy);
+            totalEnergy = 0;
+            for (int i = 0; i < linkedSim->allObjects.size(); i++) {
+                totalEnergy += 0.5 * linkedSim->allObjects[i]->m * linkedSim->allObjects[i]->v * linkedSim->allObjects[i]->v;
+                for (int j = 0; j < linkedSim->allObjects.size(); j++) {
+                    if (i == j) {
+                        continue;
+                    }
+                    float distance1 = (linkedSim->allObjects[i]->p - linkedSim->allObjects[j]->p).magnitudef();
+                    totalEnergy -= (linkedSim->G * linkedSim->allObjects[i]->m * linkedSim->allObjects[j]->m) / distance1;
+                }
+            }
+            ImGui::Text("Total Kinetic Energy: %.5f J", totalEnergy);*/
         }
-        ImGui::Text("Total Kinetic Energy: %.5f J", totalEnergy);*/
+        /*ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
+        ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
+        ImGui::Text("Angle: %.2f° %.2f°", linkedSim->cameraRotationX, linkedSim->cameraRotationY);
+        ImGui::Text("Position: %.2f° %.2f°", linkedSim->viewPosX, linkedSim->viewPosY);*/
+        ImGui::End();
     }
-    /*ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
-    ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
-    ImGui::Text("Angle: %.2f° %.2f°", linkedSim->cameraRotationX, linkedSim->cameraRotationY);
-    ImGui::Text("Position: %.2f° %.2f°", linkedSim->viewPosX, linkedSim->viewPosY);*/
-   
-    ImGui::End();
+    if (showControls) {
+        ImGui::Begin("Controls List");
+        ImGui::Text("F      - Fullscreen");
+        ImGui::Text("C      - Show Controls");
+        ImGui::Text("M      - Show Mission Data");
+        ImGui::Text("P      - Pause Simulation");
+        ImGui::Text("TAB    - Next object (SHIFT + TAB for previous)");
+        ImGui::Text(".>     - Timewarp x2");
+        ImGui::Text(",<     - Timewarp /2");
+        ImGui::Text("/      - Timewarp 1x");
+        ImGui::Text("LMB    - Slew View");
+        ImGui::Text("RMB    - Reset View");
+        ImGui::Text("MMB    - Rotate View");
+        ImGui::Text("SCROLL - Zoom View");
+        ImGui::End();
+    }
 
     // Render ImGui frame
     ImGui::Render();
@@ -901,6 +921,32 @@ void renderer::framebuffer_size_callback(GLFWwindow* window, int width, int heig
 void renderer::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     renderer* instance = static_cast<renderer*>(glfwGetWindowUserPointer(window));
+    if (key == GLFW_KEY_C && action == GLFW_PRESS)
+    {
+        instance->showControls = !instance->showControls;
+    }
+    if (key == GLFW_KEY_M && action == GLFW_PRESS)
+    {
+        instance->missionData = !instance->missionData;
+    }
+    if (key == GLFW_KEY_TAB && action == GLFW_PRESS)
+    {
+        if (mods & GLFW_MOD_SHIFT) { // Check if SHIFT is pressed
+            // Decrease the index and wrap around
+            instance->linkedSim->selectedObjectIndex -= 1;
+            if (instance->linkedSim->selectedObjectIndex < 0) {
+                instance->linkedSim->selectedObjectIndex = instance->linkedSim->allObjects.size() - 1;
+            }
+        }
+        else {
+            // Increase the index and wrap around
+            instance->linkedSim->selectedObjectIndex += 1;
+            if (instance->linkedSim->selectedObjectIndex >= instance->linkedSim->allObjects.size()) {
+                instance->linkedSim->selectedObjectIndex = 0;
+            }
+        }
+        instance->linkedSim->selectedObject = instance->linkedSim->allObjects[instance->linkedSim->selectedObjectIndex];
+    }
     if (key == GLFW_KEY_PERIOD && action == GLFW_PRESS)
     {
         instance->linkedSim->timeWarp = instance->linkedSim->timeWarp * 2.0f;
@@ -927,12 +973,6 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
     {
         if (instance->linkedSim->showTraces) instance->linkedSim->showTraces = false;
         else instance->linkedSim->showTraces = true;
-    }
-    if (key == GLFW_KEY_V && action == GLFW_PRESS)
-    {
-        instance->VSYNC = !instance->VSYNC;
-        glfwMakeContextCurrent(window);
-        glfwSwapInterval(instance->VSYNC);
     }
     if (key == GLFW_KEY_F && action == GLFW_PRESS)
     {

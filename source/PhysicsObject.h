@@ -64,7 +64,7 @@ public:
 	}
 	void VerletStep(double dt)
 	{
-		this->p += this->v * dt + this->a * (dt * dt * 0.5f);
+		this->p += this->v * dt + this->a * (dt * dt * 0.5);
 		this->outputPosition[0] = (float)this->p.x;
 		this->outputPosition[1] = (float)this->p.y;
 		this->outputPosition[2] = (float)this->p.z;
@@ -78,20 +78,20 @@ public:
 	void RK4Step1(double dt)
 	{
 		this->p1 = this->p;
-		double dtOver2 = dt * 0.5f;
-		this->p2 = this->p1 + this->v * dt + 0.5f * this->a1 * dt * dt;
+		double dtOver2 = dt * 0.5;
+		this->p2 = this->p1 + this->v * dt + 0.5 * this->a1 * dt * dt;
 	}
 
 	void RK4Step2(double dt)
 	{
-		double dtOver2 = dt * 0.5f;
-		this->p3 = this->p1 + this->v * dtOver2 + 0.5f * this->a2 * dtOver2 * dtOver2;
+		double dtOver2 = dt * 0.5;
+		this->p3 = this->p1 + this->v * dtOver2 + 0.5 * this->a2 * dtOver2 * dtOver2;
 	}
 
 	void RK4Step3(double dt)
 	{
-		double dtOver2 = dt * 0.5f;
-		this->p4 = this->p1 + this->v * dtOver2 + 0.5f * this->a3 * dtOver2 * dtOver2;
+		double dtOver2 = dt * 0.5;
+		this->p4 = this->p1 + this->v * dtOver2 + 0.5 * this->a3 * dtOver2 * dtOver2;
 	}
 
 	void RK4Step4(double dt)
@@ -101,7 +101,7 @@ public:
 		triple a3 = this->a3;
 		triple a4 = this->a4;
 		this->a = (a1 + (2 * a4) + (2 * a3) + a2) / 6;
-		this->p = this->p + this->v * dt + 0.5f * this->a * dt * dt;
+		this->p = this->p + this->v * dt + 0.5 * this->a * dt * dt;
 		this->v = this->v + this->a * dt;
 		if (this->v.magnitude() > c) {
 			this->v = this->v.normalized() * c;
