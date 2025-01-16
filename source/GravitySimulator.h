@@ -38,6 +38,7 @@ public:
     int years = 0, days = 0, hours = 0, minutes = 0;
     double seconds = 0.0;
     float positionStoreDelay = 1000;
+    float oldPositionStoreDelay = 1000;
     double nextStorageTime = 0;
     SimType::RunMode type = SimType::Modified;
     int numThreads = (int)std::thread::hardware_concurrency();
@@ -97,6 +98,10 @@ public:
             {
                 if (!useRK)
                 {
+                    if (oldPositionStoreDelay != positionStoreDelay) {
+                        nextStorageTime = timeElapsed + positionStoreDelay;
+                        oldPositionStoreDelay = positionStoreDelay;
+                    }
                     switch (type) {
                     case 0:   CalculateForces();      break;
                     case 1:   CalculateForcesMT();    break;
@@ -142,6 +147,10 @@ public:
                 }
                 else
                 {
+                    if (oldPositionStoreDelay != positionStoreDelay) {
+                        nextStorageTime = timeElapsed + positionStoreDelay;
+                        oldPositionStoreDelay = positionStoreDelay;
+                    }
                     for (RKStep = 1; RKStep < 5; RKStep++)
                     {
                         switch (type) {

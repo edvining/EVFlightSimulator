@@ -81,8 +81,8 @@ void LotsOfBalls() {
     PhysicsObject mars("Mars", 6.4171e23f, 3389920.0f, { 1.838132282343054E+11, 1.077250455786663E+11, -2.233343150142968E+09 },
         { -1.132073342589737E+04, 2.296074025888803E+04, 7.591572611068891E+02 });
     simulator.AddObject(&mars);
-    PhysicsObject spaceship("Spaceship", 20.0f, 10000.0f, earth.p + triple{ 100000 + 6378137, 0, 0 },
-        /*{ 0, 0, 0 }*/earth.v + triple{ 0, 11005, 0 });
+    PhysicsObject spaceship("Spaceship", 20.0f, 10000.0f, earth.p + triple{ 100000 + 6378137, 0, -50000 },
+        /*{ 0, 0, 0 }*/earth.v + triple{ 1100, 10960, 1000 });
     simulator.AddObject(&spaceship);
     spaceship.referenceObject = &earth;
     simulator.numberOfStoredPositions = 10000;

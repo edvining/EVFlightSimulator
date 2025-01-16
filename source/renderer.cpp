@@ -409,17 +409,17 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             for (const auto& name : objectNames) {
                 objectNamesCStr.push_back(name.c_str());
             }
-            linkedSim->selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
-            if (linkedSim->selectedObjectIndex >= vec.size()) {
-                linkedSim->selectedObjectIndex = 0;
+            selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
+            if (selectedObjectIndex >= vec.size()) {
+                selectedObjectIndex = 0;
                 linkedSim->selectedObject = linkedSim->allObjects[0];
             }
-            static int selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+            selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
             if (selectedObjectIndex2 >= vec.size()) {
                 selectedObjectIndex2 = 0;
             }
             // Render the dropdown
-            if (ImGui::Combo("Select Object", &linkedSim->selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
+            if (ImGui::Combo("Select Object", &selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
                 // Optional: Handle object selection changes
             }
 
@@ -427,14 +427,14 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             double distance = linkedSim->selectedObject->p.magnitude();
             ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
             ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude(), (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude() / 299792458.0);
-
+            
             // Render the dropdown
             if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
                 // Optional: Handle object selection changes
             }
-            if (linkedSim->selectedObject != linkedSim->allObjects[linkedSim->selectedObjectIndex])
+            if (linkedSim->selectedObject != linkedSim->allObjects[selectedObjectIndex])
             {
-                linkedSim->selectedObject = linkedSim->allObjects[linkedSim->selectedObjectIndex];
+                linkedSim->selectedObject = linkedSim->allObjects[selectedObjectIndex];
                 selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
             }
             linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
@@ -461,8 +461,8 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             }
             ImGui::Text("Total Kinetic Energy: %.5f J", totalEnergy);*/
         }
-        /*ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
-        ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
+        ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
+        /*ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
         ImGui::Text("Angle: %.2f° %.2f°", linkedSim->cameraRotationX, linkedSim->cameraRotationY);
         ImGui::Text("Position: %.2f° %.2f°", linkedSim->viewPosX, linkedSim->viewPosY);*/
         ImGui::End();
@@ -937,12 +937,20 @@ void renderer::key_callback(GLFWwindow* window, int key, int scancode, int actio
             if (instance->linkedSim->selectedObjectIndex < 0) {
                 instance->linkedSim->selectedObjectIndex = instance->linkedSim->allObjects.size() - 1;
             }
+            instance->selectedObjectIndex2 = (int)std::distance(instance->linkedSim->allObjects.begin(), std::find(instance->linkedSim->allObjects.begin(), instance->linkedSim->allObjects.end(), instance->linkedSim->selectedObject->referenceObject));
+            if (instance->selectedObjectIndex2 >= instance->linkedSim->allObjects.size()) {
+                instance->selectedObjectIndex2 = 0;
+            }
         }
         else {
             // Increase the index and wrap around
             instance->linkedSim->selectedObjectIndex += 1;
             if (instance->linkedSim->selectedObjectIndex >= instance->linkedSim->allObjects.size()) {
                 instance->linkedSim->selectedObjectIndex = 0;
+            }
+            instance->selectedObjectIndex2 = (int)std::distance(instance->linkedSim->allObjects.begin(), std::find(instance->linkedSim->allObjects.begin(), instance->linkedSim->allObjects.end(), instance->linkedSim->selectedObject->referenceObject));
+            if (instance->selectedObjectIndex2 >= instance->linkedSim->allObjects.size()) {
+                instance->selectedObjectIndex2 = 0;
             }
         }
         instance->linkedSim->selectedObject = instance->linkedSim->allObjects[instance->linkedSim->selectedObjectIndex];

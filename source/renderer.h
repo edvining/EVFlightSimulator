@@ -51,6 +51,8 @@ public:
     bool VSYNC = false;
     bool showControls = true;
     bool missionData = false;
+    int selectedObjectIndex = 0;
+    int selectedObjectIndex2 = 0;
     RenderingMethod renderingMethod = RenderingMethod::MultiThreading;
 
     renderer();
