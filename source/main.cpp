@@ -49,7 +49,7 @@ void RunSim(GravitySimulator* sim, application* app) {
 
 
 
-void LotsOfBalls() {
+void OberthEffect() {
     // Initialise application
     application app1("OpenGL", 4, 6);
     app1.renderingMethod = RenderingMethod::MultiThreading;
@@ -109,10 +109,10 @@ void LotsOfBalls() {
     for (int i = 0; i < generatedObjs.size(); i++) {
         simulator.AddObject(generatedObjs[i]);
     }*/
-    std::string string = std::format("Empty {}", 284);
+    /*std::string string = std::format("Empty {}", 284);
     double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * 284) + earth.radius + 400000.0));
     generatedObjs.push_back(new PhysicsObject(string.c_str(), 5, 40000.0, earth.p + triple((1000000.0 * 284) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * 284), 0), false, &earth));
-    simulator.AddObject(generatedObjs[0]);
+    simulator.AddObject(generatedObjs[0]);*/
     simulator.selectedObject = &earth;
     simulator.referenceObject = &sun;
     moon.referenceObject = &earth;
@@ -324,6 +324,6 @@ void TestThreeBody() {
 }
 
 int main() {
-    LotsOfBalls();
+    OberthEffect();
 	return 0;
 }

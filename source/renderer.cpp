@@ -461,7 +461,7 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             }
             ImGui::Text("Total Kinetic Energy: %.5f J", totalEnergy);*/
         }
-        ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
+        //ImGui::PlotLines("Frame Time", frameTimes.data(), frameTimes.size(), 0, nullptr, 0.0f, 0.01f, ImVec2(0, 100));
         /*ImGui::Text("Window Size: %dx%d", scrWidth, scrHeight);
         ImGui::Text("Angle: %.2f° %.2f°", linkedSim->cameraRotationX, linkedSim->cameraRotationY);
         ImGui::Text("Position: %.2f° %.2f°", linkedSim->viewPosX, linkedSim->viewPosY);*/
