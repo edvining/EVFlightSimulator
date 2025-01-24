@@ -133,6 +133,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)resource;$(SolutionDir)resource\glad\include;$(SolutionDir)resource\GLFW\include;$(SolutionDir)resource\glm;$(SolutionDir)resource\GLEW\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

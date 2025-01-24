@@ -47,8 +47,6 @@ void RunSim(GravitySimulator* sim, application* app) {
 	}
 }
 
-
-
 void OberthEffect() {
     // Initialise application
     application app1("OpenGL", 4, 6);
@@ -118,7 +116,7 @@ void OberthEffect() {
     moon.referenceObject = &earth;
     earth.referenceObject = &sun;
     sun.referenceObject = &sun;
-    simulator.positionStoreDelay = 1000;
+    simulator.positionStoreDelay = 1;
     simulator.useRK = true;
     simulator.numberOfStoredPositions = 1000;
     simulator.SetReferenceObjects();

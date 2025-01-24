@@ -7,8 +7,8 @@ class PhysicsObject
 public:
 	const double c = 299792458.0;
 	triple p, v, a;
-	triple p1, p2, p3, p4;
-	triple a1, a2, a3, a4;
+	triple p1, p2, p3, p4, p5, p6;
+	triple a1, a2, a3, a4, a5, a6;
 	triple ExternalForces;
 	std::vector<triple> pastPositions;
 	std::vector<triple> pastPositionstemp;
@@ -103,6 +103,40 @@ public:
 		this->a = (a1 + (2 * a4) + (2 * a3) + a2) / 6;
 		this->p = this->p + this->v * dt + 0.5 * this->a * dt * dt;
 		this->v = this->v + this->a * dt;
+		if (this->v.magnitude() > c) {
+			this->v = this->v.normalized() * c;
+		}
+	}
+
+	void RKFStep1(double dt) {
+		this->p1 = this->p;
+		double dt2 = 0.25 * dt;
+		this->p2 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * dt2 * dt2);
+	}
+	void RKFStep2(double dt) {
+		double dt2 = (3.0 / 8.0) * dt;
+		this->p3 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0/32.0) * dt2 * dt2);
+	}
+
+	void RKFStep3(double dt) {
+		double dt2 = (12.0 / 13.0) * dt;
+		this->p4 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0 / 32.0) * dt2 * dt2);
+	}
+
+	void RKFStep4(double dt) {
+		double dt2 = (12.0 / 13.0) * dt;
+		this->p5 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0 / 32.0) * dt2 * dt2);
+	}
+	void RKFStep5(double dt) {
+		double dt2 = (12.0 / 13.0) * dt;
+		this->p6 = this->p1 + (this->v * (0.05) * dt) + (0.5 * this->a5 * (0.05) * (0.05) * dt * dt) + (0.5 * this->a4 * ((23824.0 / 253365.0 - 0.05) * (23824.0 / 253365.0 - 0.05)) * dt * dt) + (0.5 * a3 * ((44.0 / 45.0 - 0.05) * (44.0 / 45.0 - 0.05)) * dt * dt) + (0.5 * a2 * ((3.0 / 40.0 - 0.05) * (3.0 / 40.0 - 0.05)) * dt * dt) + (0.5 * a1 * ((1.0 / 5.0 - 0.05) * (1.0 / 5.0 - 0.05)) * dt * dt);
+	}
+
+	void RKFStep6(double dt) {
+		double dt2 = (12.0 / 13.0) * dt;
+		this->p = this->p;
+		this->v = this->v + (this->a1 * (16.0 / 135.0) + this->a3 * (6656.0 / 12825.0) + this->a4 * (28561.0 / 56430.0) + this->a5 * (9.0 / 50.0) + this->a6 * (2.0 / 55.0)) * dt;
+
 		if (this->v.magnitude() > c) {
 			this->v = this->v.normalized() * c;
 		}
