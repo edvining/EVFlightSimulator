@@ -362,3 +362,7 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /resource/imgui/main.cpp
+
+# pls dont ignore GLEW
+
+!resource/GLEW/*
