@@ -25,7 +25,7 @@
 #include <future>
 
 using application = renderer;
-float minimumdt = 1.0f/50000000000000000.0f;
+float minimumdt = 1.0f/50000000.0f;
 
 bool paused = false;
 
@@ -322,6 +322,7 @@ void TestThreeBody() {
 }
 
 int main() {
+    std::cout << "The size of a physics object is: " << sizeof(PhysicsObject) << "bytes (" << sizeof(PhysicsObject) / 1024.0f / 1024.0f << "MB)" << std::endl;
     OberthEffect();
 	return 0;
 }
