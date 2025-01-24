@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.10)
+project(EVFS)
+
+add_executable(EVFS
+      source/main.cpp
+      source/renderer.cpp
+      source/IndexBuffer.cpp
+      source/Shader.cpp
+      source/VertexArray.cpp
+      source/VertexBuffer.cpp
+  )
+
+target_include_directories(EVFS
+  PRIVATE
+    resource
+    resource/GLFW/include
+    resource/GLEW/include
+)
