@@ -365,4 +365,5 @@ FodyWeavers.xsd
 
 # pls dont ignore GLEW
 
-!resource/GLEW/*
+!/resource/GLEW/*
+!/resource/GLFW/*
