@@ -1,55 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
 project(EVFS)
 
-# Find OpenGL
-find_package(OpenGL REQUIRED)
-
 add_executable(EVFS
-    source/main.cpp
-    source/renderer.cpp
-    source/IndexBuffer.cpp
-    source/Shader.cpp
-    source/VertexArray.cpp
-    source/VertexBuffer.cpp
-    source/GravitySimulator.cpp
-    source/PhysicsObject.cpp
-    source/triple.h
-    source/renderer.h
-    source/IndexBuffer.h
-    source/Shader.h
-    source/VertexArray.h
-    source/VertexBuffer.h
-    source/GravitySimulator.h
-    source/PhysicsObject.h
+source/main.cpp
+source/renderer.cpp
+source/IndexBuffer.cpp
+source/Shader.cpp
+source/VertexArray.cpp
+source/VertexBuffer.cpp
 )
 
-# Include directories (for your own headers)
 target_include_directories(EVFS
-    PRIVATE
-        resource  # Assuming your custom headers (like triple.h) are here
-        ${OPENGL_INCLUDE_DIRS}
-        source
-)
-
-# --- GLEW Setup (Submodule) ---
-add_subdirectory(resource/GLEW)
-target_include_directories(EVFS PRIVATE resource/GLEW/include)
-
-# --- GLFW Setup (Submodule) ---
-add_subdirectory(resource/GLFW)
-target_include_directories(EVFS PRIVATE resource/GLFW/include)
-
-
-# --- ImGui Setup (Submodule) ---
-add_subdirectory(resource/imgui)
-target_include_directories(EVFS PRIVATE resource/imgui)
-
-
-# Link libraries
-target_link_libraries(EVFS
-    PRIVATE
-        GLEW::GLEW  # Use the target name from GLEW's CMakeLists.txt
-        glfw        # Use the target name from GLFW's CMakeLists.txt
-        ${OPENGL_LIBRARIES}
-        imgui       # Link against the 'imgui' target
+PRIVATE
+resource
+resource/GLFW/include
+resource/GLEW/include
 )
