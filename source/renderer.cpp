@@ -130,14 +130,14 @@ void renderer::render() {
             start = clock1::now();
 
             // Save render and sim times to vectors
-            /*frameTimes.push_back((float)renderdt);
+            frameTimes.push_back((float)renderdt);
             while (frameTimes.size() > 400) {
                 frameTimes.erase(frameTimes.begin());
             }
             frameTimes2.push_back(linkedSim->myDt);
             while (frameTimes2.size() > 400) {
                 frameTimes2.erase(frameTimes2.begin());
-            }*/
+            }
             
             // Clear the screen
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -254,14 +254,14 @@ void renderer::rendernonmt() {
             start = clock1::now();
 
             // Save render and sim times to vectors
-            /*frameTimes.push_back(renderdt);
+            frameTimes.push_back(renderdt);
             while (frameTimes.size() > 400) {
                 frameTimes.erase(frameTimes.begin());
             }
             frameTimes2.push_back(linkedSim->myDt);
             while (frameTimes2.size() > 400) {
                 frameTimes2.erase(frameTimes2.begin());
-            }*/
+            }
 
             // Clear the screen
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
