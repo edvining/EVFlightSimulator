@@ -1,6 +1,7 @@
 #pragma once
 #include "triple.h"
 #include "GravitySimulator.h"
+#include <cmath>
 
 class PhysicsObject
 {
@@ -16,13 +17,16 @@ public:
 	const std::string name;
 	double GPE;
 	double m;
-	float radius;
+	double mu;
+	std::mutex storingMutex;
+	color colour = { 1, 1, 1 };
 	float outputPosition[3];
-	bool firstIter = true;
-	bool contributesToGravity = true;
+	float radius;
+	float swartzchildRadius;
 	int index;
 	int referenceObjectIndex = 0;
-	std::mutex storingMutex;
+	bool firstIter = true;
+	bool contributesToGravity = true;
 	/// <summary>
 	/// Mass, radius, position, velocity
 	/// </summary>
@@ -31,8 +35,8 @@ public:
 	/// <param name="p"></param>
 	/// <param name="v"></param>
 	/// <param name="a"></param>
-	PhysicsObject(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : name(name), p(p), v(v), a(triple::zero()), m(m), radius(radius), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z }, contributesToGravity(contributesToGravSim), referenceObject(refObj) { pastPositions.push_back(p); }
-	PhysicsObject() : name("Empty"), p(triple::zero()), v(triple::zero()), a(triple::zero()), m(10), radius(1), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z } { pastPositions.push_back(p); }
+	PhysicsObject(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : name(name), p(p), v(v), a(triple::zero()), m(m), mu(m * 6.67e-11), radius(radius), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z }, contributesToGravity(contributesToGravSim), referenceObject(refObj) {}
+	PhysicsObject() : name("Empty"), p(triple::zero()), v(triple::zero()), a(triple::zero()), m(10), mu(m * 6.67e-11), radius(1), GPE(0), outputPosition{ (float)p.x, (float)p.y, (float)p.z } {}
 	triple GetPosition()
 	{
 		return p;
@@ -74,7 +78,18 @@ public:
 		}
 		ClearForce();
 	}
-
+	void EulerStep2(double dt)
+	{
+		this->v = this->v + this->a * dt;
+		this->p = this->p + this->v * dt;
+		this->outputPosition[0] = (float)this->p.x;
+		this->outputPosition[1] = (float)this->p.y;
+		this->outputPosition[2] = (float)this->p.z;
+		if (this->v.magnitude() > c) {
+			this->v = this->v.normalized() * c;
+		}
+		ClearForce();
+	}
 	void RK4Step1(double dt)
 	{
 		this->p1 = this->p;
@@ -115,7 +130,7 @@ public:
 	}
 	void RKFStep2(double dt) {
 		double dt2 = (3.0 / 8.0) * dt;
-		this->p3 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0/32.0) * dt2 * dt2);
+		this->p3 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0 / 32.0) * dt2 * dt2);
 	}
 
 	void RKFStep3(double dt) {
@@ -169,11 +184,31 @@ public:
 		}
 	}
 
-	void SetReferenceObject(std::vector<PhysicsObject*> &allobjects) {
-		referenceObjectIndex = find(allobjects.begin(), allobjects.end(), referenceObject) - allobjects.begin(); 
+	void SetReferenceObject(std::vector<PhysicsObject*>& allobjects) {
+		referenceObjectIndex = find(allobjects.begin(), allobjects.end(), referenceObject) - allobjects.begin();
 		if (referenceObject == nullptr) {
 			referenceObjectIndex = 0;
 		}
 		referenceObject = allobjects[referenceObjectIndex];
+	}
+
+	void SetOrbitAround(PhysicsObject* refObj, double SMA, double ECC, double AOP, double LAN, double INC, double MA) {
+		double vt = 2 * atan2(sqrt(1 + ECC) * sin((MA) * 0.5f), sqrt(1 - ECC) * cos(MA * 0.5f));
+		double rc = SMA * (1 - ECC * cos(MA));
+		triple ot{ rc * cos(vt), rc * sin(vt), 0 };
+		double _const = sqrt(refObj->mu * SMA) / rc;
+		triple odot{ _const * (-sin(MA)), _const * (sqrt(1 - ECC * ECC) * cos(MA)), 0 };
+		triple rt{
+			ot.x * (cos(AOP) * cos(LAN) - sin(AOP) * cos(INC) * sin(LAN)) - ot.y * (sin(AOP) * cos(LAN) + cos(AOP) * cos(INC) * sin(LAN)),
+			ot.x * (cos(AOP) * sin(LAN) + sin(AOP) * cos(INC) * cos(LAN)) + ot.y * (cos(AOP) * cos(INC) * cos(LAN) - sin(AOP) * sin(LAN)),
+			ot.x * (sin(AOP) * sin(INC)) - ot.y * (cos(AOP) * sin(INC))
+		};
+		triple rdot{
+			odot.x * (cos(AOP) * cos(LAN) - sin(AOP) * cos(INC) * sin(LAN)) - odot.y * (sin(AOP) * cos(LAN) + cos(AOP) * cos(INC) * sin(LAN)),
+			odot.x * (cos(AOP) * sin(LAN) + sin(AOP) * cos(INC) * cos(LAN)) + odot.y * (cos(AOP) * cos(INC) * cos(LAN) - sin(AOP) * sin(LAN)),
+			odot.x * (sin(AOP) * sin(INC)) - odot.y * (cos(AOP) * sin(INC))
+		};
+		this->p = refObj->p + rt;
+		this->v = refObj->v + rdot;
 	}
 };
