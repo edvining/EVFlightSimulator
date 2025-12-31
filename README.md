@@ -32,7 +32,7 @@ The current implementation uses **OpenGL** to enable rapid development and itera
 
 ### Vulkan (Planned)
 
-Vulkan support is being considered for future versions once the simulation core is sufficiently mature. Vulkan’s explicit API design offers greater control and performance potential at the cost of substantially increased complexity.
+Vulkan support is being considered for future versions once the simulation core is sufficiently mature. Vulkan�s explicit API design offers greater control and performance potential at the cost of substantially increased complexity.
 
 ---
 

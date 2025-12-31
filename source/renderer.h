@@ -1,7 +1,7 @@
 #pragma once
-#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include "VertexArray.h"
 #include "IndexBuffer.h"
 #include "Shader.h"

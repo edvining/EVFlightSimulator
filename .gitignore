@@ -362,8 +362,24 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /resource/imgui/main.cpp
+# Allow bundled GLEW/GLFW library files (override generic Release/ ignore)
+!resource/GLEW/lib/
+!resource/GLEW/lib/Release/
+!resource/GLEW/lib/Release/Win32/*.lib
+!resource/GLEW/lib/Release/x64/*.lib
+!resource/GLEW/bin/
+!resource/GLEW/bin/Release/
+!resource/GLEW/bin/Release/Win32/*.dll
+!resource/GLEW/bin/Release/x64/*.dll
+!resource/GLEW/bin/Release/Win32/*.exe
+!resource/GLEW/bin/Release/x64/*.exe
 
-# pls dont ignore GLEW
+!resource/GLFW/lib/
+!resource/GLFW/lib/Release/
+!resource/GLFW/lib/Release/*.lib
+!resource/GLFW/bin/
+!resource/GLFW/bin/Release/
+!resource/GLFW/bin/Release/*.dll
 
-!/resource/GLEW/*
-!/resource/GLFW/*
+[Bb]uild/
+*.exe

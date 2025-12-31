@@ -7,9 +7,8 @@
 #include <queue>
 #include <functional>
 #include <condition_variable>
+#include <chrono>
 #include "PhysicsObject.h"
-
-using namespace std::chrono_literals;
 
 struct SimType {
 public:
@@ -1025,7 +1024,7 @@ public:
 
     // Function to make the thread do work
     static void work(int id) {
-        std::this_thread::sleep_for(1ms);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         int result = 0;
         for (int i = 0; i < id + 1; i++) {
             result += i;
