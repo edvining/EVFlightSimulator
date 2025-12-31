@@ -371,6 +371,8 @@ FodyWeavers.xsd
 !resource/GLEW/bin/Release/
 !resource/GLEW/bin/Release/Win32/*.dll
 !resource/GLEW/bin/Release/x64/*.dll
+!resource/GLEW/bin/Release/Win32/*.exe
+!resource/GLEW/bin/Release/x64/*.exe
 
 !resource/GLFW/lib/
 !resource/GLFW/lib/Release/
