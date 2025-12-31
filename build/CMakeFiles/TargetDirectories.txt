@@ -1,0 +1,4 @@
+C:/Users/edvin/source/repos/edvining/EVFlightSimulator/build/CMakeFiles/imgui.dir
+C:/Users/edvin/source/repos/edvining/EVFlightSimulator/build/CMakeFiles/EVFlightSimulator.dir
+C:/Users/edvin/source/repos/edvining/EVFlightSimulator/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/edvin/source/repos/edvining/EVFlightSimulator/build/CMakeFiles/ZERO_CHECK.dir
