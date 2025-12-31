@@ -20,4 +20,13 @@ The ```GravitySimulator``` object handles all the gravity, collision, and physic
 
 By design, the ```GravitySimulator``` runs on a completely separate thread from the main rendering thread, and works at maximum speed all the time, no matter what the rest of the threads are doing. The renderer thread can lock some of the mutexes in the Gravity Simulator, so that it can render the objects as they were at one timeframe, rather than the objects moving during frame creation. This stops objects "jittering" when at high velocity in close proximity with other objects.
 
-```PhysicsObject``` is the base object
+```PhysicsObject``` is the base object used by the gravity simulator, and describes parameters of each object in the scene.
+Basic Parameters:
+```m``` - Mass
+```r``` - Radius
+```p``` - Position
+```v``` - Velocity
+
+For this initial implementation, all objects are spheres, but this will change to allow meshes to be imported as objects shapes.
+
+Positions and Velocities are Double Precision Floating Point vectors, implemented as ```Vector3D```
