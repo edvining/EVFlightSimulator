@@ -21,6 +21,7 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+[Bb]uild/
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -380,3 +381,5 @@ FodyWeavers.xsd
 !resource/GLFW/bin/
 !resource/GLFW/bin/Release/
 !resource/GLFW/bin/Release/*.dll
+
+build/

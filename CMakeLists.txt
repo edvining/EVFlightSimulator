@@ -7,6 +7,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(USE_SYSTEM_GLEW "Try find_package(GLEW) and use system GLEW if available" ON)
 option(USE_SYSTEM_GLFW "Try find_package(glfw3) and use system GLFW if available" ON)
 
+# Detect target architecture directory (Win32 vs x64)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(TARGET_ARCH_DIR "x64")
+else()
+    set(TARGET_ARCH_DIR "Win32")
+endif()
+message(STATUS "Target architecture dir: ${TARGET_ARCH_DIR}")
+
 # Collect project sources
 file(GLOB_RECURSE EVFS_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/source/*.cpp"
@@ -35,7 +43,7 @@ target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLEW)
 # ---- Find system libraries (OpenGL, GLEW, GLFW) ----
 find_package(OpenGL REQUIRED)
 
-# --- GLEW: prefer find_package, then try to find prebuilt libs under resource, otherwise fail with instructions
+# --- GLEW: prefer find_package, then try repo-bundled libs (arch-aware), otherwise instruct user
 if(USE_SYSTEM_GLEW)
     find_package(GLEW QUIET)
 endif()
@@ -44,7 +52,6 @@ set(GLEW_TARGET "")
 if(TARGET GLEW::GLEW)
     set(GLEW_TARGET GLEW::GLEW)
 elseif(GLEW_FOUND)
-    # older FindGLEW variant exposed variables; create imported wrapper
     add_library(glew_imported UNKNOWN IMPORTED)
     set_target_properties(glew_imported PROPERTIES
         IMPORTED_LOCATION "${GLEW_LIBRARIES}"
@@ -52,36 +59,37 @@ elseif(GLEW_FOUND)
     )
     set(GLEW_TARGET glew_imported)
 else()
-    # try to find prebuilt libs in repo under resource/GLEW/lib or lib64
-    find_library(GLEW_LIB NAMES glew32s glew32
-        PATHS
-            "${CMAKE_SOURCE_DIR}/resource/GLEW/lib"
-            "${CMAKE_SOURCE_DIR}/resource/GLEW/lib64"
-            "${CMAKE_SOURCE_DIR}/resource/GLEW/Lib"
-            "${CMAKE_SOURCE_DIR}/resource/GLEW/Lib64"
-        NO_DEFAULT_PATH
+    # Search bundled libs in arch-specific folders first
+    set(GLEW_SEARCH_PATHS
+        "${CMAKE_SOURCE_DIR}/resource/GLEW/lib/Release/${TARGET_ARCH_DIR}"
+        "${CMAKE_SOURCE_DIR}/resource/GLEW/lib/${TARGET_ARCH_DIR}"
+        "${CMAKE_SOURCE_DIR}/resource/GLEW/Lib/Release/${TARGET_ARCH_DIR}"
+        "${CMAKE_SOURCE_DIR}/resource/GLEW/Lib/${TARGET_ARCH_DIR}"
+        "${CMAKE_SOURCE_DIR}/resource/GLEW/lib"
+        "${CMAKE_SOURCE_DIR}/resource/GLEW/Lib"
     )
+    find_library(GLEW_LIB NAMES glew32s glew32 PATHS ${GLEW_SEARCH_PATHS} NO_DEFAULT_PATH)
     if(GLEW_LIB)
-        add_library(glew_static STATIC IMPORTED)
-        set_target_properties(glew_static PROPERTIES
+        add_library(glew_repo STATIC IMPORTED)
+        set_target_properties(glew_repo PROPERTIES
             IMPORTED_LOCATION "${GLEW_LIB}"
             INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/resource/GLEW/include"
             INTERFACE_COMPILE_DEFINITIONS "GLEW_STATIC"
         )
-        set(GLEW_TARGET glew_static)
+        set(GLEW_TARGET glew_repo)
         message(STATUS "Using bundled GLEW library: ${GLEW_LIB}")
     else()
         message(FATAL_ERROR
-"GLEW not found. Options:
- - Install via vcpkg and configure CMake with -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg.cmake (recommended)
+"GLEW library not found for target architecture (${TARGET_ARCH_DIR}).
+Options:
+ - Install glew via vcpkg and reconfigure CMake with -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg.cmake (recommended).
    e.g. vcpkg install glew:x64-windows
- - Or provide a built GLEW library in resource/GLEW/lib (glew32s.lib or glew32.lib)
- - Or set variables -DGLEW_LIB=<path> and -DGLEW_INCLUDE=<path> and update CMakeLists accordingly.
-See README or run: git clone https://github.com/microsoft/vcpkg.git && .\\vcpkg\\bootstrap-vcpkg.bat && .\\vcpkg\\vcpkg.exe install glew:x64-windows")
+ - Place a built GLEW .lib (glew32s.lib or glew32.lib) under resource/GLEW/lib/<Release|Debug>/${TARGET_ARCH_DIR}
+ - Or provide system GLEW so find_package(GLEW) succeeds.")
     endif()
 endif()
 
-# --- GLFW: prefer find_package, then try to find prebuilt libs under resource, otherwise fail with instructions
+# --- GLFW: prefer find_package, then repo-bundled (arch-aware)
 if(USE_SYSTEM_GLFW)
     find_package(glfw3 QUIET)
 endif()
@@ -92,39 +100,32 @@ if(TARGET glfw)
 elseif(TARGET glfw3)
     set(GLFW_TARGET glfw3)
 elseif(glfw3_FOUND)
-    # some Find modules only set glfw3_FOUND and variables; create an imported wrapper if needed
     add_library(glfw3_imported UNKNOWN IMPORTED)
-    # If find_package provided variables (GLFW_LIBRARIES/GLFW_INCLUDE_DIRS), you could set properties here.
     set(GLFW_TARGET glfw3_imported)
 else()
-    # try to find prebuilt glfw lib files in repo under resource/GLFW/lib*
-    find_library(GLFW_LIB NAMES glfw3 glfw
-        PATHS
-            "${CMAKE_SOURCE_DIR}/resource/GLFW/lib"
-            "${CMAKE_SOURCE_DIR}/resource/GLFW/lib64"
-            "${CMAKE_SOURCE_DIR}/resource/GLFW/Lib"
-            "${CMAKE_SOURCE_DIR}/resource/GLFW/Lib64"
-        NO_DEFAULT_PATH
+    set(GLFW_SEARCH_PATHS
+        "${CMAKE_SOURCE_DIR}/resource/GLFW/lib-vc2022"
     )
+    find_library(GLFW_LIB NAMES glfw3 glfw PATHS ${GLFW_SEARCH_PATHS} NO_DEFAULT_PATH)
     if(GLFW_LIB)
-        add_library(glfw3_static STATIC IMPORTED)
-        set_target_properties(glfw3_static PROPERTIES
+        add_library(glfw_repo STATIC IMPORTED)
+        set_target_properties(glfw_repo PROPERTIES
             IMPORTED_LOCATION "${GLFW_LIB}"
             INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/resource/GLFW/include"
         )
-        set(GLFW_TARGET glfw3_static)
+        set(GLFW_TARGET glfw_repo)
         message(STATUS "Using bundled GLFW library: ${GLFW_LIB}")
     else()
         message(FATAL_ERROR
-"GLFW not found. Options:
- - Install via vcpkg and configure CMake with -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg.cmake (recommended)
-   e.g. vcpkg install glfw3:x64-windows
- - Or provide a built GLFW library in resource/GLFW/lib (glfw3.lib)
- - Or set variables -DGLFW_LIB=<path> and -DGLFW_INCLUDE=<path> and update CMakeLists accordingly.")
+"GLFW library not found for target architecture (${TARGET_ARCH_DIR}).
+Options:
+ - Install glfw3 via vcpkg and reconfigure CMake with -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg.cmake (recommended).
+ - Put a built glfw3.lib under resource/GLFW/lib/<Release|Debug>/${TARGET_ARCH_DIR}
+ - Or provide system glfw so find_package(glfw3) succeeds.")
     endif()
 endif()
 
-# Link imgui to GLFW/GLEW so backend sources can find their headers when building
+# Ensure imgui build sees GLFW/GLEW headers/libs
 if(GLEW_TARGET)
     target_link_libraries(imgui PRIVATE ${GLEW_TARGET})
 endif()
@@ -135,16 +136,22 @@ endif()
 # ---- Target: EVFlightSimulator ----
 add_executable(EVFlightSimulator ${EVFS_SOURCES})
 
+# Place executable in repository root so runtime relative paths like "res/shaders/..." resolve from working directory.
+# For multi-config generators (Visual Studio) set per-config output as well so the exe ends up directly in repo root.
+set_target_properties(EVFlightSimulator PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_SOURCE_DIR}"
+)
+
 target_include_directories(EVFlightSimulator PRIVATE
     "${CMAKE_SOURCE_DIR}/resource"
     "${CMAKE_SOURCE_DIR}/source"
     "${CMAKE_SOURCE_DIR}/resource/stb_image"
 )
 
-# Ensure GLEW static define is visible to compile units (matches your code)
 target_compile_definitions(EVFlightSimulator PRIVATE GLEW_STATIC)
 
-# Link third-party targets (glm produces target 'glm' in resource/glm/CMakeLists.txt)
 target_link_libraries(EVFlightSimulator PRIVATE
     imgui
     glm
@@ -153,6 +160,31 @@ target_link_libraries(EVFlightSimulator PRIVATE
     OpenGL::GL
 )
 
+# Copy runtime DLLs (pick arch-specific bins if present)
+set(GLEW_DLL_SEARCH
+    "${CMAKE_SOURCE_DIR}/resource/GLEW/bin/Release/${TARGET_ARCH_DIR}"
+    "${CMAKE_SOURCE_DIR}/resource/GLEW/bin/${TARGET_ARCH_DIR}"
+    "${CMAKE_SOURCE_DIR}/resource/GLEW/bin"
+)
+set(GLFW_DLL_SEARCH
+    "${CMAKE_SOURCE_DIR}/resource/GLFW/bin/Release/${TARGET_ARCH_DIR}"
+    "${CMAKE_SOURCE_DIR}/resource/GLFW/bin/${TARGET_ARCH_DIR}"
+    "${CMAKE_SOURCE_DIR}/resource/GLFW/bin"
+)
+file(GLOB GLEW_DLLS
+    LIST_DIRECTORIES OFF
+    ${GLEW_DLL_SEARCH}/glew*.dll
+)
+file(GLOB GLFW_DLLS
+    LIST_DIRECTORIES OFF
+    ${GLFW_DLL_SEARCH}/glfw*.dll
+)
+foreach(_dll IN LISTS GLEW_DLLS GLFW_DLLS)
+    add_custom_command(TARGET EVFlightSimulator POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_dll}" $<TARGET_FILE_DIR:EVFlightSimulator>
+        COMMENT "Copying runtime DLL ${_dll} to output directory")
+endforeach()
+
 # Convenience
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/source")
 
@@ -160,3 +192,19 @@ message(STATUS "Configured EVFlightSimulator")
 message(STATUS "  - source files: ${EVFS_SOURCES}")
 message(STATUS "  - imgui: ${IMGUI_DIR}")
 message(STATUS "  - glm: resource/glm (added subdirectory)")
+
+# Fail fast if an arch-mismatched GLEW was found (e.g. Win32 while building x64)
+if(GLEW_LIB)
+    string(TOLOWER "${GLEW_LIB}" _glew_lib_lc)
+    if(TARGET_ARCH_DIR STREQUAL "x64" AND _glew_lib_lc MATCHES "win32")
+        message(FATAL_ERROR "Found GLEW library for Win32 (${GLEW_LIB}) while CMake target is x64. Place an x64 glew .lib in resource/GLEW/lib/Release/x64 or use vcpkg (recommended).")
+    endif()
+endif()
+
+# Fail fast if an arch-mismatched GLFW was found
+if(GLFW_LIB)
+    string(TOLOWER "${GLFW_LIB}" _glfw_lib_lc)
+    if(TARGET_ARCH_DIR STREQUAL "x64" AND _glfw_lib_lc MATCHES "win32")
+        message(FATAL_ERROR "Found GLFW library for Win32 (${GLFW_LIB}) while CMake target is x64. Place an x64 glfw3.lib in resource/GLFW/lib/<Release|Debug>/x64 or use vcpkg.")
+    endif()
+endif()
