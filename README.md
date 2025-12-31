@@ -1,32 +1,122 @@
 # Echo Victor Flight Simulator
 
-This is the start of the OpenGL Spaceflight / Flight Simulator made by me, Edward Vining (aka Echo Victor).
+**Echo Victor Flight Simulator** is a high-performance spaceflight and atmospheric flight simulation project developed in **C++**, with a focus on physical accuracy, numerical stability, and efficient use of modern hardware.
 
-I am aiming to make this a highly realistic, very performant, OpenGL / Vulkan application, written in C++. 
+The project aims to deliver a realistic simulation environment while maintaining strong performance characteristics through careful architectural and threading decisions.
 
-This allows me to take full advantage of the computer hardware, as C++ is as close to directly coding the hardware itself.
+---
 
-Khronos OpenGL (Open Graphics Library) is an Open-Source graphics library, enabling direct rendering to the screen, and whilst not as verbose as Vulkan, still enables very good levels of performance.
+## Project Goals
 
-Khronos Vulkan is also an Open-Source graphics library, with almost everything exposed to the user, making it incredibly verbose to write, but enabling better performance capabilities.
+- High-fidelity physics simulation suitable for spaceflight and atmospheric regimes  
+- Deterministic, numerically stable integration over large spatial and temporal scales  
+- Efficient multi-threaded architecture separating physics and rendering workloads  
+- Modern graphics pipeline using OpenGL, with future extensibility toward Vulkan  
 
-I have decided to make this project using OpenGL as it is much easier to write and create a working prototype faster.
+---
 
-## Structure
+## Technology Stack
 
-This simulator has two main objects, the ```GravitySimulator``` object and ```Renderer``` object.
+- **Language:** C++  
+- **Graphics API:** OpenGL (Khronos)  
+- **Math Precision:** Double-precision floating point  
+- **Concurrency:** Multi-threaded (physics and rendering separation)
 
-The ```GravitySimulator``` object handles all the gravity, collision, and physics calculations, while the ```Renderer``` object handles all of the (you guessed it), Rendering calculations.
+---
 
-By design, the ```GravitySimulator``` runs on a completely separate thread from the main rendering thread, and works at maximum speed all the time, no matter what the rest of the threads are doing. The renderer thread can lock some of the mutexes in the Gravity Simulator, so that it can render the objects as they were at one timeframe, rather than the objects moving during frame creation. This stops objects "jittering" when at high velocity in close proximity with other objects.
+## Graphics Backend
 
-```PhysicsObject``` is the base object used by the gravity simulator, and describes parameters of each object in the scene.
-Basic Parameters:
-```m``` - Mass
-```r``` - Radius
-```p``` - Position
-```v``` - Velocity
+### OpenGL
 
-For this initial implementation, all objects are spheres, but this will change to allow meshes to be imported as objects shapes.
+The current implementation uses **OpenGL** to enable rapid development and iteration while retaining strong performance characteristics. OpenGL provides direct GPU access with significantly lower implementation complexity than Vulkan.
 
-Positions and Velocities are Double Precision Floating Point vectors, implemented as ```Vector3D```
+### Vulkan (Planned)
+
+Vulkan support is being considered for future versions once the simulation core is sufficiently mature. Vulkan’s explicit API design offers greater control and performance potential at the cost of substantially increased complexity.
+
+---
+
+## System Architecture
+
+The simulator is structured around two primary subsystems:
+
+| Subsystem | Description |
+|---------|------------|
+| **Gravity Simulator** | Handles gravity calculations, collision detection, and physics integration |
+| **Renderer** | Responsible for visual output, camera control, and GPU interaction |
+
+---
+
+## Multithreading Model
+
+The **Gravity Simulator** runs on a dedicated physics thread and operates continuously at maximum speed, independent of the rendering frame rate.
+
+The **Renderer** runs on the main thread and synchronises with the physics system by locking shared mutexes. This allows the renderer to sample a consistent snapshot of the simulation state at a fixed timestep.
+
+This design prevents visual artefacts such as jitter when simulating high-velocity objects in close proximity.
+
+---
+
+## Physics System
+
+### PhysicsObject
+
+`PhysicsObject` is the foundational data structure representing any physical entity in the simulation.
+
+#### Core Properties
+
+| Property | Description | Type |
+|--------|------------|------|
+| Mass | Object mass | `double` |
+| Radius | Collision radius | `double` |
+| Position | World-space position | `Vector3D` |
+| Velocity | Linear velocity | `Vector3D` |
+
+> **Current Limitation:**  
+> All physics objects are presently modelled as spheres. Support for mesh-based geometry and more advanced collision models is planned.
+
+---
+
+## Mathematical Types
+
+### Vector3D
+
+`Vector3D` is a three-dimensional vector type implemented using **double-precision floating point** values.
+
+It is used throughout the simulation for:
+- Position and displacement vectors  
+- Velocity and acceleration  
+- Force and momentum calculations  
+
+Double precision is required to maintain accuracy across large spatial scales and long-duration simulations, particularly for orbital mechanics.
+
+---
+
+## Design Principles
+
+- **Performance First:** Avoid unnecessary abstraction in performance-critical systems  
+- **Determinism:** Stable, reproducible physics behaviour  
+- **Scalability:** Designed to support increasing object counts and simulation complexity  
+- **Extensibility:** Architecture structured to accommodate future rendering and physics upgrades  
+
+---
+
+## Roadmap
+
+- Mesh-based collision and object representation  
+- Improved integrators for orbital and atmospheric dynamics  
+- Optional Vulkan rendering backend  
+- Data-oriented refactoring for large-scale simulations  
+
+---
+
+## Author
+
+**Edward Vining**  
+Flight simulation enthusiast and C++ developer  
+
+---
+
+## License
+
+License information to be defined.
