@@ -7,13 +7,18 @@
 #include <queue>
 #include <functional>
 #include <condition_variable>
-#include <chrono>
 #include "PhysicsObject.h"
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 struct SimType {
 public:
     enum RunMode { SingleThreaded, MultiThreaded, WorkerThreads, Modified };
+
 };
+
+enum UpdateType { Verlet, Euler, RungeKutte4, SymplecticEuler };
 
 class GravitySimulator
 {
@@ -25,12 +30,18 @@ private:
     std::vector<std::thread> threads;
 public:
     bool finished = false;
+    bool enableCollisions = false;
     static constexpr double G = 6.67e-11;
     static constexpr double LIGHTSPEED = 3e+8;
     std::vector<PhysicsObject*> allObjects;
     std::vector<PhysicsObject*> gravitationalObjects;
     std::vector<PhysicsObject*> physicsObjects;
     PhysicsObject* selectedObject;
+
+    // New members for rotating reference frame:
+    PhysicsObject* frameOrientationObject = nullptr;
+    bool useRotatingReferenceFrame = true;
+
     PhysicsObject* referenceObject;
     int selectedObjectIndex;
     double timeElapsed = 0;
@@ -40,6 +51,7 @@ public:
     float oldPositionStoreDelay = 1000;
     double nextStorageTime = 0;
     SimType::RunMode type = SimType::Modified;
+    UpdateType updateType = UpdateType::SymplecticEuler;
     int numThreads = (int)std::thread::hardware_concurrency();
     std::mutex accelMutex;
     std::mutex storingPositionsMutex;
@@ -113,28 +125,82 @@ public:
 
     void RunSimulation(double inputdt, int substeps)
     {
-        if(!paused)
+        if (paused)
         {
-            SetReferenceObjects();
-            
-            double dt = timeWarp * inputdt;
-            myDt = inputdt;
-            for (int i = 0; i < substeps; i++)
+            return;
+        }
+        SetReferenceObjects();
+        double dt = timeWarp * inputdt;
+        myDt = inputdt;
+        for (int i = 0; i < substeps; i++)
+        {
+            if (!useRK)
             {
-                if (!useRK)
+                if (oldPositionStoreDelay != positionStoreDelay) {
+                    nextStorageTime = timeElapsed + positionStoreDelay;
+                    oldPositionStoreDelay = positionStoreDelay;
+                }
+                switch (type) {
+                case 0:   CalculateForces();      break;
+                case 1:   CalculateForcesMT();    break;
+                case 2:   CalculateForcesWorker();    break;
+                case 3:   CalculateForcesModified();  break;
+                }
+
+                UpdateObjects((dt) / substeps, updateType);
+                if (enableCollisions) SolveDistanceConstraints();
+                timeElapsed += dt / substeps;
+                seconds += dt / substeps;
+                if (seconds >= 60.0) {
+                    minutes += static_cast<int>(seconds) / 60;
+                    seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
+
+                    if (minutes >= 60) {
+                        hours += minutes / 60;
+                        minutes %= 60; // Remainder after dividing by 60
+                    }
+
+                    if (hours >= 24) {
+                        days += hours / 24;
+                        hours %= 24; // Remainder after dividing by 24
+                    }
+
+                    if (days >= 365) {
+                        years += days / 365;
+                        days %= 365; // Remainder after dividing by 365
+                    }
+                }
+                if (timeElapsed > nextStorageTime && storingPositions) {
+                    storingPositionsMutex.lock();
+                    for (PhysicsObject* object : allObjects)
+                    {
+                        object->StoreCurrentPosition(numberOfStoredPositions);
+                    }
+                    storingPositionsMutex.unlock();
+                    if (positionStoreDelay < dt / substeps) {
+                        nextStorageTime += dt / substeps;
+                    }
+                    else { nextStorageTime += positionStoreDelay; }
+                }
+            }
+            else
+            {
+                if (!useRKF)
                 {
                     if (oldPositionStoreDelay != positionStoreDelay) {
                         nextStorageTime = timeElapsed + positionStoreDelay;
                         oldPositionStoreDelay = positionStoreDelay;
                     }
-                    switch (type) {
-                    case 0:   CalculateForces();      break;
-                    case 1:   CalculateForcesMT();    break;
-                    case 2:   CalculateForcesWorker();    break;
-                    case 3:   CalculateForcesModified();  break;
+                    for (RKStep = 1; RKStep < 5; RKStep++)
+                    {
+                        switch (type) {
+                        case 0:   CalculateForces();      break;
+                        case 1:   CalculateForcesMT();    break;
+                        case 2:   CalculateForcesWorker();    break;
+                        case 3:   CalculateForcesModified();  break;
+                        }
+                        RKSimStep(dt / substeps);
                     }
-
-                    UpdateObjects((dt) / substeps, type);
                     SolveDistanceConstraints();
                     timeElapsed += dt / substeps;
                     seconds += dt / substeps;
@@ -162,6 +228,7 @@ public:
                         for (PhysicsObject* object : allObjects)
                         {
                             object->StoreCurrentPosition(numberOfStoredPositions);
+                            object->ClearForce();
                         }
                         storingPositionsMutex.unlock();
                         if (positionStoreDelay < dt / substeps) {
@@ -169,133 +236,77 @@ public:
                         }
                         else { nextStorageTime += positionStoreDelay; }
                     }
+                    else {
+                        for (PhysicsObject* object : allObjects)
+                        {
+                            object->ClearForce();
+                        }
+                    }
                 }
                 else
                 {
-                    if(!useRKF)
+                    if (oldPositionStoreDelay != positionStoreDelay) {
+                        nextStorageTime = timeElapsed + positionStoreDelay;
+                        oldPositionStoreDelay = positionStoreDelay;
+                    }
+                    for (RKFStep = 1; RKFStep < 7; RKFStep++)
                     {
-                        if (oldPositionStoreDelay != positionStoreDelay) {
-                            nextStorageTime = timeElapsed + positionStoreDelay;
-                            oldPositionStoreDelay = positionStoreDelay;
+                        switch (type) {
+                        case 0:   CalculateForces();      break;
+                        case 1:   CalculateForcesMT();    break;
+                        case 2:   CalculateForcesWorker();    break;
+                        case 3:   CalculateForcesModified();  break;
                         }
-                        for (RKStep = 1; RKStep < 5; RKStep++)
-                        {
-                            switch (type) {
-                            case 0:   CalculateForces();      break;
-                            case 1:   CalculateForcesMT();    break;
-                            case 2:   CalculateForcesWorker();    break;
-                            case 3:   CalculateForcesModified();  break;
-                            }
-                            RKSimStep(dt / substeps);
-                        }
-                        SolveDistanceConstraints();
-                        timeElapsed += dt / substeps;
-                        seconds += dt / substeps;
-                        if (seconds >= 60.0) {
-                            minutes += static_cast<int>(seconds) / 60;
-                            seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
+                        RKFSimStep(dt / substeps);
+                    }
+                    SolveDistanceConstraints();
+                    timeElapsed += dt / substeps;
+                    seconds += dt / substeps;
+                    if (seconds >= 60.0) {
+                        minutes += static_cast<int>(seconds) / 60;
+                        seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 
-                            if (minutes >= 60) {
-                                hours += minutes / 60;
-                                minutes %= 60; // Remainder after dividing by 60
-                            }
-
-                            if (hours >= 24) {
-                                days += hours / 24;
-                                hours %= 24; // Remainder after dividing by 24
-                            }
-
-                            if (days >= 365) {
-                                years += days / 365;
-                                days %= 365; // Remainder after dividing by 365
-                            }
+                        if (minutes >= 60) {
+                            hours += minutes / 60;
+                            minutes %= 60; // Remainder after dividing by 60
                         }
-                        if (timeElapsed > nextStorageTime && storingPositions) {
-                            storingPositionsMutex.lock();
-                            for (PhysicsObject* object : allObjects)
-                            {
-                                object->StoreCurrentPosition(numberOfStoredPositions);
-                                object->ClearForce();
-                            }
-                            storingPositionsMutex.unlock();
-                            if (positionStoreDelay < dt / substeps) {
-                                nextStorageTime += dt / substeps;
-                            }
-                            else { nextStorageTime += positionStoreDelay; }
+
+                        if (hours >= 24) {
+                            days += hours / 24;
+                            hours %= 24; // Remainder after dividing by 24
                         }
-                        else {
-                            for (PhysicsObject* object : allObjects)
-                            {
-                                object->ClearForce();
-                            }
+
+                        if (days >= 365) {
+                            years += days / 365;
+                            days %= 365; // Remainder after dividing by 365
                         }
                     }
-                    else
-                    {
-                        if (oldPositionStoreDelay != positionStoreDelay) {
-                            nextStorageTime = timeElapsed + positionStoreDelay;
-                            oldPositionStoreDelay = positionStoreDelay;
-                        }
-                        for (RKFStep = 1; RKFStep < 7; RKFStep++)
+                    if (timeElapsed > nextStorageTime && storingPositions) {
+                        storingPositionsMutex.lock();
+                        for (PhysicsObject* object : allObjects)
                         {
-                            switch (type) {
-                            case 0:   CalculateForces();      break;
-                            case 1:   CalculateForcesMT();    break;
-                            case 2:   CalculateForcesWorker();    break;
-                            case 3:   CalculateForcesModified();  break;
-                            }
-                            RKFSimStep(dt / substeps);
+                            object->StoreCurrentPosition(numberOfStoredPositions);
+                            object->ClearForce();
                         }
-                        SolveDistanceConstraints();
-                        timeElapsed += dt / substeps;
-                        seconds += dt / substeps;
-                        if (seconds >= 60.0) {
-                            minutes += static_cast<int>(seconds) / 60;
-                            seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
-
-                            if (minutes >= 60) {
-                                hours += minutes / 60;
-                                minutes %= 60; // Remainder after dividing by 60
-                            }
-
-                            if (hours >= 24) {
-                                days += hours / 24;
-                                hours %= 24; // Remainder after dividing by 24
-                            }
-
-                            if (days >= 365) {
-                                years += days / 365;
-                                days %= 365; // Remainder after dividing by 365
-                            }
+                        storingPositionsMutex.unlock();
+                        if (positionStoreDelay < dt / substeps) {
+                            nextStorageTime += dt / substeps;
                         }
-                        if (timeElapsed > nextStorageTime && storingPositions) {
-                            storingPositionsMutex.lock();
-                            for (PhysicsObject* object : allObjects)
-                            {
-                                object->StoreCurrentPosition(numberOfStoredPositions);
-                                object->ClearForce();
-                            }
-                            storingPositionsMutex.unlock();
-                            if (positionStoreDelay < dt / substeps) {
-                                nextStorageTime += dt / substeps;
-                            }
-                            else { nextStorageTime += positionStoreDelay; }
-                        }
-                        else {
-                            for (PhysicsObject* object : allObjects)
-                            {
-                                object->ClearForce();
-                            }
+                        else { nextStorageTime += positionStoreDelay; }
+                    }
+                    else {
+                        for (PhysicsObject* object : allObjects)
+                        {
+                            object->ClearForce();
                         }
                     }
-
                 }
+
             }
-            for (PhysicsObject* object : allObjects)
-            {
-                object->ClearExternalForce();
-            }
-            
+        }
+        for (PhysicsObject* object : allObjects)
+        {
+            object->ClearExternalForce();
         }
     }
 
@@ -444,6 +455,8 @@ public:
         for (int i = 0; i < l; i++) {
             for (int j = 0; j < k; j++) {
                 CalculateForcePhys(i, j);
+                l = physicsObjects.size();
+                k = gravitationalObjects.size();
             }
         }
     }
@@ -637,6 +650,9 @@ public:
         {
             triple displacement = object2->p - object1->p;
             double magnitude = displacement.magnitude();
+            if (magnitude < object1->swartzchildRadius) {
+                RemoveObject(object2);
+            }
             triple force = (G * displacement) / (magnitude * magnitude * magnitude);
             object1->a += force * object2->m;
             object2->a -= force * object1->m;
@@ -806,6 +822,12 @@ public:
         {
             triple displacement = object2->p - object1->p;
             double magnitude = displacement.magnitude();
+            if (magnitude < object1->swartzchildRadius) {
+                RemoveObject(object2);
+            }
+            if (magnitude < object2->swartzchildRadius) {
+                RemoveObject(object1);
+            }
             triple force = (G * displacement) / (magnitude * magnitude * magnitude);
             object1->a += force * object2->m;
             object2->a -= force * object1->m;
@@ -820,6 +842,12 @@ public:
             {
                 triple displacement = object2->p - object1->p;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a1 += force * object2->m;
                 object2->a1 -= force * object1->m;
@@ -830,6 +858,12 @@ public:
             {
                 triple displacement = object2->p2 - object1->p2;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a2 += force * object2->m;
                 object2->a2 -= force * object1->m;
@@ -840,6 +874,12 @@ public:
             {
                 triple displacement = object2->p3 - object1->p3;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a3 += force * object2->m;
                 object2->a3 -= force * object1->m;
@@ -850,6 +890,12 @@ public:
             {
                 triple displacement = object2->p4 - object1->p4;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a4 += force * object2->m;
                 object2->a4 -= force * object1->m;
@@ -860,6 +906,12 @@ public:
             {
                 triple displacement = object2->p - object1->p;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a += force * object2->m;
                 object2->a -= force * object1->m;
@@ -877,6 +929,12 @@ public:
         {
             triple displacement = object2->p - object1->p;
             double magnitude = displacement.magnitude();
+            if (magnitude < object1->swartzchildRadius) {
+                RemoveObject(object2);
+            }
+            if (magnitude < object2->swartzchildRadius) {
+                RemoveObject(object1);
+            }
             triple force = (G * displacement) / (magnitude * magnitude * magnitude);
             object1->a += force * object2->m;
             object1->a += object1->ExternalForces / object1->m;
@@ -889,6 +947,12 @@ public:
             {
                 triple displacement = object2->p - object1->p;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a1 += force * object2->m;
                 object1->a1 += object1->ExternalForces / object1->m;
@@ -897,6 +961,12 @@ public:
             {
                 triple displacement = object2->p2 - object1->p2;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a2 += force * object2->m;
                 object1->a2 += object1->ExternalForces / object1->m;
@@ -905,6 +975,12 @@ public:
             {
                 triple displacement = object2->p3 - object1->p3;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a3 += force * object2->m;
                 object1->a3 += object1->ExternalForces / object1->m;
@@ -913,6 +989,12 @@ public:
             {
                 triple displacement = object2->p4 - object1->p4;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a4 += force * object2->m;
                 object1->a4 += object1->ExternalForces / object1->m;
@@ -921,6 +1003,12 @@ public:
             {
                 triple displacement = object2->p - object1->p;
                 double magnitude = displacement.magnitude();
+                if (magnitude < object1->swartzchildRadius) {
+                    RemoveObject(object2);
+                }
+                if (magnitude < object2->swartzchildRadius) {
+                    RemoveObject(object1);
+                }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a += force * object2->m;
                 object1->a += object1->ExternalForces / object1->m;
@@ -937,7 +1025,8 @@ public:
             {
             case 0:  object->VerletStep(dt); break;
             case 1:  object->EulerStep(dt); break;
-            case 2: { object->RK4Step4(dt); } break;
+            case 2:  object->RK4Step4(dt);  break;
+            case 3:  object->EulerStep2(dt);  break;
             default: object->EulerStep(dt); break;
             }
             object->ClearForce();
@@ -964,14 +1053,22 @@ public:
     {
         if (object->contributesToGravity) {
             gravitationalObjects.push_back(object);
+            object->swartzchildRadius = 2 * object->mu / (GetLightSpeed() * GetLightSpeed());
         }
         else {
             physicsObjects.push_back(object);
         }
         object->index = currentObjectIndex++;
+        object->pastPositions.push_back(object->p);
         allObjects.push_back(object);
     }
 
+    void RemoveObject(PhysicsObject* object)
+    {
+        std::erase(allObjects, object);
+        std::erase(gravitationalObjects, object);
+        std::erase(physicsObjects, object);
+    }
     int GetNumberOfObjects()
     {
         return (int)allObjects.size();
@@ -1024,7 +1121,7 @@ public:
 
     // Function to make the thread do work
     static void work(int id) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(1ms);
         int result = 0;
         for (int i = 0; i < id + 1; i++) {
             result += i;
