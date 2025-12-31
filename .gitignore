@@ -382,3 +382,4 @@ FodyWeavers.xsd
 !resource/GLFW/bin/Release/*.dll
 
 [Bb]uild/
+*.exe
