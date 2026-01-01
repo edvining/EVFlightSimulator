@@ -735,7 +735,8 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
     Draw(va1, ib1, shader, window);
 }
 
-void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
+void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader)
+{
     float screenHeightInv = 1.0f / scrHeight;
     indexBuffer.clear();
     positions3.clear();
@@ -743,138 +744,133 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
     centre[0] = simulator->viewPosX + ((simulator->deltaX) * simulator->zoomLevel * screenHeightInv);
     centre[1] = simulator->viewPosY + ((-simulator->deltaY) * simulator->zoomLevel * screenHeightInv);
 
-    
+    /* ============================
+       FIX 1: freeze live positions
+       ============================ */
+    std::vector<triple> frozenPositions(simulator->allObjects.size());
+    for (size_t k = 0; k < simulator->allObjects.size(); ++k)
+        frozenPositions[k] = simulator->allObjects[k]->p;
+
+    triple frozenSelectedPos;
+    if (simulator->selectedObject)
+        frozenSelectedPos = simulator->selectedObject->p;
+
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
         if (!simulator->allObjects[i]->pastPositions.empty())
         {
-            unsigned int baseIndex = positions3.size()/4;
+            unsigned int baseIndex = positions3.size() / 4;
             unsigned int lastIndex = simulator->allObjects[i]->pastPositions.size();
-            // Use current position as the end of the last segment.
-            triple currentPosition = simulator->allObjects[i]->p;
+
+            /* FIX 2: use frozen current position */
+            triple currentPosition = frozenPositions[i];
+
             for (unsigned int j = 0; j < lastIndex; j++)
             {
                 float _va1l = simulator->allObjects[i]->radius * 0.5f;
                 if (_va1l / simulator->zoomLevel < 1)
-                {
                     _va1l = simulator->zoomLevel;
+
+                triple pastPosition1 = simulator->allObjects[i]->pastPositions[j];
+                triple pastPosition2 =
+                    (j == lastIndex - 1)
+                    ? currentPosition
+                    : simulator->allObjects[i]->pastPositions[j + 1];
+
+                triple referencePosition1{}, referencePosition2{}, referenceCurrentPosition{};
+
+                if (simulator->allObjects[i]->referenceObject)
+                {
+                    auto* ref = simulator->allObjects[i]->referenceObject;
+                    size_t refIdx =
+                        std::distance(simulator->allObjects.begin(),
+                            std::find(simulator->allObjects.begin(),
+                                simulator->allObjects.end(), ref));
+
+                    referencePosition1 = ref->pastPositions[j];
+                    referencePosition2 =
+                        (j == lastIndex - 1)
+                        ? frozenPositions[refIdx]
+                        : ref->pastPositions[j + 1];
+
+                    /* FIX 3: frozen reference current */
+                    referenceCurrentPosition = frozenPositions[refIdx];
                 }
 
-                triple pastPosition1,pastPosition2, referencePosition1, referencePosition2, referenceCurrentPosition;
-                pastPosition1 = simulator->allObjects[i]->pastPositions[j];
-               
-                if(j == lastIndex - 1)
+                double objX1, objY1, objZ1;
+                double objX2, objY2, objZ2;
+
+                if (simulator->selectedObject == nullptr)
                 {
-                    pastPosition2 = currentPosition;
+                    objX1 = pastPosition1.x - referencePosition1.x + referenceCurrentPosition.x;
+                    objY1 = pastPosition1.y - referencePosition1.y + referenceCurrentPosition.y;
+                    objZ1 = pastPosition1.z - referencePosition1.z + referenceCurrentPosition.z;
+
+                    objX2 = pastPosition2.x - referencePosition2.x + referenceCurrentPosition.x;
+                    objY2 = pastPosition2.y - referencePosition2.y + referenceCurrentPosition.y;
+                    objZ2 = pastPosition2.z - referencePosition2.z + referenceCurrentPosition.z;
                 }
-                else{
-                     pastPosition2 = simulator->allObjects[i]->pastPositions[j+1];
+                else
+                {
+                    objX1 = pastPosition1.x - referencePosition1.x + referenceCurrentPosition.x - frozenSelectedPos.x;
+                    objY1 = pastPosition1.y - referencePosition1.y + referenceCurrentPosition.y - frozenSelectedPos.y;
+                    objZ1 = pastPosition1.z - referencePosition1.z + referenceCurrentPosition.z - frozenSelectedPos.z;
+
+                    objX2 = pastPosition2.x - referencePosition2.x + referenceCurrentPosition.x - frozenSelectedPos.x;
+                    objY2 = pastPosition2.y - referencePosition2.y + referenceCurrentPosition.y - frozenSelectedPos.y;
+                    objZ2 = pastPosition2.z - referencePosition2.z + referenceCurrentPosition.z - frozenSelectedPos.z;
                 }
 
-                if (simulator->referenceObject != nullptr)
-                {
-                   referencePosition1 = simulator->referenceObject->pastPositions[j];
-                   if(j == lastIndex - 1)
-                   {
-                      referencePosition2 = simulator->referenceObject->p;
-                   }
-                   else
-                   {
-                        referencePosition2 = simulator->referenceObject->pastPositions[j + 1];
-                   }
-                    referenceCurrentPosition = simulator->referenceObject->p;
-                }
-                if (simulator->allObjects[i]->referenceObject != nullptr)
-                {
-                    referencePosition1 = simulator->allObjects[i]->referenceObject->pastPositions[j];
-                    if(j == lastIndex - 1)
-                    {
-                        referencePosition2 = simulator->allObjects[i]->referenceObject->p;
-                    }
-                    else
-                    {
-                        referencePosition2 = simulator->allObjects[i]->referenceObject->pastPositions[j + 1];
-                    }
+                double cosZ = cos(simulator->cameraRotationY);
+                double sinZ = sin(simulator->cameraRotationY);
 
-                    referenceCurrentPosition = simulator->allObjects[i]->referenceObject->p;
-                }
-                 double objX1, objY1, objZ1, objX2, objY2, objZ2;
-                if (simulator->selectedObject == nullptr) {
-                    objX1 = (pastPosition1.x) - (referencePosition1.x) + referenceCurrentPosition.x;
-                    objY1 = (pastPosition1.y) - (referencePosition1.y) + referenceCurrentPosition.y;
-                    objZ1 = (pastPosition1.z) - (referencePosition1.z) + referenceCurrentPosition.z;
-                    objX2 = (pastPosition2.x) - (referencePosition2.x) + referenceCurrentPosition.x;
-                    objY2 = (pastPosition2.y) - (referencePosition2.y) + referenceCurrentPosition.y;
-                    objZ2 = (pastPosition2.z) - (referencePosition2.z) + referenceCurrentPosition.z;
-                }
-                else {
-                    objX1 = (pastPosition1.x) - (referencePosition1.x) + referenceCurrentPosition.x - (simulator->selectedObject->p.x);
-                    objY1 = (pastPosition1.y) - (referencePosition1.y) + referenceCurrentPosition.y - (simulator->selectedObject->p.y);
-                    objZ1 = (pastPosition1.z) - (referencePosition1.z) + referenceCurrentPosition.z - (simulator->selectedObject->p.z);
-                    objX2 = (pastPosition2.x) - (referencePosition2.x) + referenceCurrentPosition.x - (simulator->selectedObject->p.x);
-                    objY2 = (pastPosition2.y) - (referencePosition2.y) + referenceCurrentPosition.y - (simulator->selectedObject->p.y);
-                    objZ2 = (pastPosition2.z) - (referencePosition2.z) + referenceCurrentPosition.z - (simulator->selectedObject->p.z);
-                }
-                 // Apply camera rotation with Z as the up-down axis
-                // Yaw (Z-axis rotation)
-                double cosZ = (float)cos(simulator->cameraRotationY);
-                double sinZ = (float)sin(simulator->cameraRotationY);
                 double tempX1 = objX1 * cosZ - objY1 * sinZ;
                 double tempY1 = objX1 * sinZ + objY1 * cosZ;
                 double tempX2 = objX2 * cosZ - objY2 * sinZ;
                 double tempY2 = objX2 * sinZ + objY2 * cosZ;
 
-                // Pitch (X-axis rotation)
-                float cosX = (float)cos(simulator->cameraRotationX);
-                float sinX = (float)sin(simulator->cameraRotationX);
-                float finalY1 = (float)(tempY1 * cosX - objZ1 * sinX);
-                float finalZ1 = (float)(tempY1 * sinX + objZ1 * cosX + centre[1] * scrHeight);
-                float finalX1 = (float)(tempX1 + centre[0] * scrHeight);
-                float finalY2 = (float)(tempY2 * cosX - objZ2 * sinX);
-                float finalZ2 = (float)(tempY2 * sinX + objZ2 * cosX + centre[1] * scrHeight);
-                float finalX2 = (float)(tempX2 + centre[0] * scrHeight);
+                float cosX = cos(simulator->cameraRotationX);
+                float sinX = sin(simulator->cameraRotationX);
 
-                // Calculate the vector from position 1 to 2
+                float finalZ1 = tempY1 * sinX + objZ1 * cosX + centre[1] * scrHeight;
+                float finalX1 = tempX1 + centre[0] * scrHeight;
+                float finalZ2 = tempY2 * sinX + objZ2 * cosX + centre[1] * scrHeight;
+                float finalX2 = tempX2 + centre[0] * scrHeight;
+
                 float dx = finalX2 - finalX1;
                 float dz = finalZ2 - finalZ1;
+                float len = std::sqrt(dx * dx + dz * dz);
+                if (len > 0.0001f) { dx /= len; dz /= len; }
 
-                // Calculate normalized direction vector
-                float length = std::sqrt(dx * dx + dz * dz);
-                if (length > 0.0001f)
-                {
-                    dx /= length;
-                    dz /= length;
-                }
-                // Calculate perpendicular vector
                 float px = -dz * _va1l;
                 float pz = dx * _va1l;
 
-                 // Generate the four vertices of the quad (two per point)
                 positions3.insert(positions3.end(), {
-                    (finalX1 + px) * screenHeightInv, (finalZ1 + pz) * screenHeightInv, 0.0f, 0.0f,  // Vertex 1
-                    (finalX1 - px) * screenHeightInv, (finalZ1 - pz) * screenHeightInv, 1.0f, 0.0f, // Vertex 2
-                    (finalX2 - px) * screenHeightInv, (finalZ2 - pz) * screenHeightInv, 1.0f, 1.0f,  // Vertex 3
-                    (finalX2 + px) * screenHeightInv, (finalZ2 + pz) * screenHeightInv, 0.0f, 1.0f,   // Vertex 4
-                });
+                    (finalX1 + px) * screenHeightInv, (finalZ1 + pz) * screenHeightInv, 0, 0,
+                    (finalX1 - px) * screenHeightInv, (finalZ1 - pz) * screenHeightInv, 1, 0,
+                    (finalX2 - px) * screenHeightInv, (finalZ2 - pz) * screenHeightInv, 1, 1,
+                    (finalX2 + px) * screenHeightInv, (finalZ2 + pz) * screenHeightInv, 0, 1,
+                    });
 
-                // Add indices for the quad
-                indexBuffer.insert(indexBuffer.end(),
-                    { baseIndex + j * 4, baseIndex + j * 4 + 1, baseIndex + j * 4 + 2,
-                        baseIndex + j * 4 + 2, baseIndex + j * 4 + 3, baseIndex + j * 4 });
+                indexBuffer.insert(indexBuffer.end(), {
+                    baseIndex + j * 4, baseIndex + j * 4 + 1, baseIndex + j * 4 + 2,
+                    baseIndex + j * 4 + 2, baseIndex + j * 4 + 3, baseIndex + j * 4
+                    });
             }
         }
-        
     }
-    VertexArray va1;
-    VertexBuffer vb(positions3.data(), static_cast<int>(positions3.size() * sizeof(float)));
+
+    VertexArray va;
+    VertexBuffer vb(positions3.data(), positions3.size() * sizeof(float));
     VertexBufferLayout layout;
     layout.Push<float>(2);
     layout.Push<float>(2);
-    va1.AddBuffer(vb, layout);
-    IndexBuffer ib1(indexBuffer.data(), static_cast<int>(indexBuffer.size()));
+    va.AddBuffer(vb, layout);
+    IndexBuffer ib(indexBuffer.data(), indexBuffer.size());
 
-    Draw(va1, ib1, shader, window);
+    Draw(va, ib, shader, window);
 }
+
 
 void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
 {
