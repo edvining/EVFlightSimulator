@@ -1,7 +1,8 @@
 #include "body.h"
 
 using application = renderer;
-float minimumdt = 1.0f / 50000000000000000.0f;
+double maxtps = 10000000000.0f;
+double minimumdt = 1.0f / maxtps;
 
 bool paused = false;
 
@@ -12,7 +13,7 @@ void RunSim(GravitySimulator* sim, application* app) {
             double dt = (clock1::now() - start).count() / 1000000000.0;
             start = clock1::now();
             if (dt < minimumdt) {
-                sim->RunSimulation(minimumdt, sim->substeps);
+                sim->RunSimulation(dt, sim->substeps);
                 do {
                 } while ((clock1::now() - start).count() / 1000000000.0 < minimumdt);
             }
@@ -25,7 +26,7 @@ void RunSim(GravitySimulator* sim, application* app) {
 
 void OberthEffect() {
     // Initialise application
-    application app1("OpenGL", 4, 6);
+    application app1("Echo Victor Flight Simulator", 4, 6);
     app1.renderingMethod = RenderingMethod::MultiThreading;
     // Initialise simulator and objects
     GravitySimulator simulator;
@@ -37,7 +38,7 @@ void OberthEffect() {
     simulator.showTraces = true;
     simulator.storingPositions = true;
     /*simulator.startThreads(16);*/
-    simulator.cameraRotationX = 0.0f;
+    simulator.cameraRotationX = -80.0f;
     PhysicsObject sun("Sun", 1988500e24f, 695700000.0f, { -1.009146052453886E+09, -6.342248515004860E+08, 2.918025134412420E+07 },
         { 1.102867590529470E+01, -8.970075624225537, -1.590822813779761E-01 });
     simulator.AddObject(&sun);
@@ -59,7 +60,6 @@ void OberthEffect() {
         /*{ 0, 0, 0 }*/earth.v + triple{ 1100, 10960, 1000 });
     simulator.AddObject(&spaceship);
     spaceship.referenceObject = &earth;
-    simulator.numberOfStoredPositions = 10000;
     PhysicsObject mercury("Mercury", 3.302E+23f, 2439400.0f, 1000 * triple{ 3.252515818176519E+07, -5.550392669785608E+07, -7.567397717898630E+06 },
         1000 * triple{ 3.182356791384326E+01,  2.782212905746022E+01, -6.436334037578586E-01 });
     simulator.AddObject(&mercury);
@@ -92,7 +92,7 @@ void OberthEffect() {
     moon.referenceObject = &earth;
     earth.referenceObject = &sun;
     sun.referenceObject = &sun;
-    simulator.positionStoreDelay = 1;
+    simulator.positionStoreDelay = 500;
     simulator.useRK = true;
     simulator.numberOfStoredPositions = 1000;
     simulator.SetReferenceObjects();
