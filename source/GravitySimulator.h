@@ -42,7 +42,7 @@ public:
     PhysicsObject* frameOrientationObject = nullptr;
     bool useRotatingReferenceFrame = true;
 
-    PhysicsObject* referenceObject;
+    PhysicsObject* referenceObject = nullptr;
     int selectedObjectIndex;
     double timeElapsed = 0;
     int years = 0, days = 0, hours = 0, minutes = 0;
@@ -73,7 +73,7 @@ public:
     double timeWarp = 1;
     double myDt = 0;
     bool paused = false;
-    bool storingPositions = false;
+    bool storingPositions = true;
     int numberOfStoredPositions = 1000;
     int currentObjectIndex = 0;
 
@@ -174,9 +174,9 @@ public:
                     nextStorageTime = timeElapsed + positionStoreDelay;
                     oldPositionStoreDelay = positionStoreDelay;
                 }
+                PreForceUpdateAll(timeElapsed, dt / substeps);
                 for (RKStep = 1; RKStep < 5; RKStep++)
                 {
-                    PreForceUpdateAll(timeElapsed, dt / substeps);
                     switch (type) {
                     case 0:   CalculateForces();      break;
                     case 1:   CalculateForcesMT();    break;
@@ -383,6 +383,29 @@ public:
                 k = gravitationalObjects.size();
             }
         }
+        size_t m = allObjects.size();
+        for (int i = 0; i < m; i++) {
+            CalculateExternalForce(i);
+        }
+    }
+
+    void CalculateExternalForce(int i) {
+        auto* obj = allObjects[i];
+        if (!useRK)
+        {
+            obj->a += obj->GetExternalForces() / obj->m;
+        }
+        else
+        {
+            switch (RKStep) {
+            case 1: obj->a1 += obj->GetExternalForces() / obj->m;
+            case 2: obj->a2 += obj->GetExternalForces() / obj->m;
+            case 3: obj->a3 += obj->GetExternalForces() / obj->m;
+            case 4: obj->a4 += obj->GetExternalForces() / obj->m;
+            default: obj->a += obj->GetExternalForces() / obj->m;
+            }
+        }
+        
     }
 
     void CalculateForcesModifiedMT() {
@@ -679,8 +702,6 @@ public:
             triple force = (G * displacement) / (magnitude * magnitude * magnitude);
             object1->a += force * object2->m;
             object2->a -= force * object1->m;
-            object1->a += object1->GetExternalForces() / object1->m;
-            object2->a += object2->GetExternalForces() / object2->m;
         }
         else
         {
@@ -699,8 +720,6 @@ public:
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a1 += force * object2->m;
                 object2->a1 -= force * object1->m;
-                object1->a1 += object1->GetExternalForces() / object1->m;
-                object2->a1 += object2->GetExternalForces() / object2->m;
             }break;
             case 2:
             {
@@ -715,8 +734,6 @@ public:
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a2 += force * object2->m;
                 object2->a2 -= force * object1->m;
-                object1->a2 += object1->GetExternalForces() / object1->m;
-                object2->a2 += object2->GetExternalForces() / object2->m;
             }break;
             case 3:
             {
@@ -731,8 +748,6 @@ public:
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a3 += force * object2->m;
                 object2->a3 -= force * object1->m;
-                object1->a3 += object1->GetExternalForces() / object1->m;
-                object2->a3 += object2->GetExternalForces() / object2->m;
             }break;
             case 4:
             {
@@ -747,8 +762,6 @@ public:
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a4 += force * object2->m;
                 object2->a4 -= force * object1->m;
-                object1->a4 += object1->GetExternalForces() / object1->m;
-                object2->a4 += object2->GetExternalForces() / object2->m;
             }break;
             default:
             {
@@ -763,8 +776,6 @@ public:
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a += force * object2->m;
                 object2->a -= force * object1->m;
-                object1->a += object1->GetExternalForces() / object1->m;
-                object2->a += object2->GetExternalForces() / object2->m;
             }break;
             }
         }
@@ -785,7 +796,6 @@ public:
             }
             triple force = (G * displacement) / (magnitude * magnitude * magnitude);
             object1->a += force * object2->m;
-            object1->a += object1->GetExternalForces() / object1->m;
         }
         else
         {
@@ -803,7 +813,6 @@ public:
                 }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a1 += force * object2->m;
-                object1->a1 += object1->GetExternalForces() / object1->m;
             }break;
             case 2:
             {
@@ -817,7 +826,6 @@ public:
                 }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a2 += force * object2->m;
-                object1->a2 += object1->GetExternalForces() / object1->m;
             }break;
             case 3:
             {
@@ -831,7 +839,6 @@ public:
                 }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a3 += force * object2->m;
-                object1->a3 += object1->GetExternalForces() / object1->m;
             }break;
             case 4:
             {
@@ -845,7 +852,6 @@ public:
                 }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a4 += force * object2->m;
-                object1->a4 += object1->GetExternalForces() / object1->m;
             }break;
             default:
             {
@@ -859,7 +865,6 @@ public:
                 }
                 triple force = (G * displacement) / (magnitude * magnitude * magnitude);
                 object1->a += force * object2->m;
-                object1->a += object1->GetExternalForces() / object1->m;
             }break;
             }
         }

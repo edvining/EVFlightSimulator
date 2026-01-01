@@ -213,7 +213,7 @@ public:
 		currentThrustAmount = 0.0;
 		currentThrustVector = triple::zero();
 
-		if (autopilot == AutopilotMode::AUTO_ORBIT && targetObject) {
+		if (autopilot == AutopilotMode::AUTO_ORBIT && targetObject && RKStep == 1) {
 			UpdateAutoOrbit(simTime, dt, RKStep);
 		}
 
@@ -233,6 +233,7 @@ public:
 
 			double thrust = std::min(currentThrustAmount, maxThrustAvailable);
 			AddForce(currentThrustVector * thrust);
+			std::cout << "Thrusting at " << thrust << "N along (" << currentThrustVector.string() << ")" << std::endl;
 		}
 	}
 
@@ -254,7 +255,7 @@ public:
 		triple r = p - targetObject->p;
 		triple vrel = v - targetObject->v;
 
-		switch (RKStep) {
+		/*switch (RKStep) {
 		case 0: { r = p - targetObject->p;
 			 vrel = v - targetObject->v; } break;
 		case 1: { r = p1 - targetObject->p1;
@@ -265,7 +266,7 @@ public:
 			 vrel = v3 - targetObject->v3; } break;
 		case 4: { r = p4 - targetObject->p4;
 			 vrel = v4 - targetObject->v4; } break;
-		}
+		}*/
 
 		triple rhat = r.normalized();
 		triple v_radial_vec = vrel.onto(rhat);
@@ -276,35 +277,35 @@ public:
 
 		double rmag = r.magnitude();
 		double v_circ = std::sqrt(targetObject->mu / rmag);
+		triple v_circ_vec = v_tangent_vec.normalized() * v_circ;
 
-		constexpr double RADIAL_EPS = 0.05;
+		constexpr double RADIAL_EPS = 10.0;
 		constexpr double TANGENT_EPS = 0.1;
 
 		if (std::abs(v_radial) > RADIAL_EPS)
 			return; // wait for apoapsis/periapsis
 
-		double error = v_tangent - v_circ;
-
-		if (std::abs(error) < TANGENT_EPS)
+		triple error = v_tangent_vec - v_circ_vec;
+		if (error.magnitude() < TANGENT_EPS)
 		{
 			autopilot = AutopilotMode::IDLE;
 			return;
 		}
 
-		triple retrograde = -1*v_tangent_vec.normalized();
+		triple retrograde = -1*error.normalized();
 
 		double Kp = 0.05;
 
 		currentThrustVector += retrograde;
 		currentThrustAmount += std::clamp(
-			Kp * std::abs(error),
+			Kp * error.magnitude(),
 			0.0,
 			maxThrustAvailable
 		);
 		double desiredAcc = currentThrustAmount / m;
 
 		// Compute safe dt
-		double t_safe = std::min(dt, std::abs(error) / desiredAcc);
+		double t_safe = std::min(dt, error.magnitude() / desiredAcc);
 
 		// Apply scaled thrust for this timestep
 		currentThrustAmount = currentThrustAmount * (t_safe / dt);

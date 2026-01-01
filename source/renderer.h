@@ -86,6 +86,8 @@ public:
 
     void renderTrailsLines(GravitySimulator* simulator, Shader& shader);
 
+    void renderExternalForces(GravitySimulator* simulator, Shader& shader);
+
     void renderCircle(const Shader& shader);
 
     void Draw(const VertexArray& va, const IndexBuffer& ib, const Shader& shader, GLFWwindow* window);

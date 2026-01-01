@@ -110,6 +110,7 @@ void renderer::render() {
         timepoint timeSinceStart = clock1::now();
         Shader shader("res/shaders/shader.vert", "res/shaders/shader.frag");
         Shader shader2("res/shaders/shaderFilled.vert", "res/shaders/shaderFilled.frag");
+        Shader shader3("res/shaders/shaderFilled.vert", "res/shaders/shaderFilled.frag");
         float r = 1.0f;
         float g = 1.0f;
         float b = 1.0f;
@@ -119,6 +120,9 @@ void renderer::render() {
         shader2.Bind();
         shader2.SetUniform4f("u_Colour", 1.0f, 0.0f, 0.0f, 1.0f);
         shader2.Unbind();
+        shader3.Bind();
+        shader3.SetUniform4f("u_Colour", 0.0f, 1.0f, 0.0f, 1.0f);
+        shader3.Unbind();
 
         glfwSetScrollCallback(window, scroll_callback);
         glfwSetKeyCallback(window, key_callback);
@@ -145,10 +149,12 @@ void renderer::render() {
 
             setMVPMatrix(shader);
             setMVPMatrix(shader2);
+            setMVPMatrix(shader3);
             
             if (linkedSim->showTraces) {
                 renderTrailsLines(linkedSim, shader2);
             }
+            renderExternalForces(linkedSim, shader3);
             renderSimulatorObjects(linkedSim, shader);
 
             renderImGui(linkedSim);
@@ -235,15 +241,19 @@ void renderer::rendernonmt() {
         timepoint timeSinceStart = clock1::now();
         Shader shader("res/shaders/shader.vert", "res/shaders/shader.frag");
         Shader shader2("res/shaders/shaderFilled.vert", "res/shaders/shaderFilled.frag");
+        Shader shader3("res/shaders/shaderFilled.vert", "res/shaders/shaderFilled.frag");
         float r = 1.0f;
         float g = 1.0f;
         float b = 1.0f;
         shader.Bind();
-        shader.SetUniform4f("u_Colour", r, g, b, 1.0f);
+        shader.SetUniform4f("u_Colour", r, g, b, 0.3f);
         shader.Unbind();
         shader2.Bind();
-        shader2.SetUniform4f("u_Colour", 1.0f, 0.0f, 0.0f, 1.0f);
+        shader2.SetUniform4f("u_Colour", 1.0f, 0.0f, 0.0f, 0.3f);
         shader2.Unbind();
+        shader3.Bind();
+        shader3.SetUniform4f("u_Colour", 0.0f, 1.0f, 0.0f, 0.3f);
+        shader3.Unbind();
 
         glfwSetScrollCallback(window, scroll_callback);
         glfwSetKeyCallback(window, key_callback);
@@ -269,10 +279,12 @@ void renderer::rendernonmt() {
 
             setMVPMatrix(shader);
             setMVPMatrix(shader2);
+            setMVPMatrix(shader3);
 
             if (linkedSim->showTraces) {
                 renderTrailsLines(linkedSim, shader2);
             }
+			renderExternalForces(linkedSim, shader3);
             renderSimulatorObjects(linkedSim, shader);
 
             renderImGui(linkedSim);
@@ -872,6 +884,98 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
 
     Draw(va1, ib1, shader, window);
 }
+
+void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
+{
+    float screenHeightInv = 1.0f / scrHeight;
+    indexBuffer.clear();
+    positions3.clear();
+
+    centre[0] = simulator->viewPosX + (simulator->deltaX * simulator->zoomLevel * screenHeightInv);
+    centre[1] = simulator->viewPosY + (-simulator->deltaY * simulator->zoomLevel * screenHeightInv);
+
+    const float maxVisibleForce = 100.0f; // Force that fills full visible length
+    const float lineLength = 50.0f;        // Maximum length on screen for max force
+
+    simulator->storingPositionsMutex.lock();
+    for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
+    {
+        triple pos = simulator->allObjects[i]->p;
+        triple force = simulator->allObjects[i]->ExternalForces; // Should be total external force
+
+        // Optional: subtract reference / selected object if needed
+        if (simulator->selectedObject->referenceObject != nullptr)
+        {
+            pos.x -= simulator->selectedObject->referenceObject->p.x;
+            pos.y -= simulator->selectedObject->referenceObject->p.y;
+            pos.z -= simulator->selectedObject->referenceObject->p.z;
+        }
+
+        // Scale force for visual representation
+        float scale = lineLength / maxVisibleForce;
+        float fx = force.x * scale;
+        float fy = force.y * scale;
+        float fz = force.z * scale;
+
+        // Apply camera rotation (Z-up)
+        double cosZ = cos(simulator->cameraRotationY);
+        double sinZ = sin(simulator->cameraRotationY);
+
+        double tempX = fx * cosZ - fy * sinZ;
+        double tempY = fx * sinZ + fy * cosZ;
+        double tempZ = fz;
+
+        float cosX = cos(simulator->cameraRotationX);
+        float sinX = sin(simulator->cameraRotationX);
+
+        float finalX1 = (float)(pos.x + centre[0] * scrHeight);
+        float finalY1 = (float)(pos.y * cosX - pos.z * sinX);
+        float finalZ1 = (float)(pos.y * sinX + pos.z * cosX + centre[1] * scrHeight);
+
+        float finalX2 = (float)(pos.x + tempX + centre[0] * scrHeight);
+        float finalY2 = (float)(tempY + pos.y * cosX - pos.z * sinX);
+        float finalZ2 = (float)(tempZ + pos.y * sinX + pos.z * cosX + centre[1] * scrHeight);
+
+        // Simple line as a quad of width _va1l (optional, for thicker lines)
+        float _va1l = 1.5f; // Line thickness in pixels
+        float dx = finalX2 - finalX1;
+        float dz = finalZ2 - finalZ1;
+        float length = std::sqrt(dx * dx + dz * dz);
+        if (length > 0.0001f)
+        {
+            dx /= length;
+            dz /= length;
+        }
+
+        float px = -dz * _va1l;
+        float pz = dx * _va1l;
+
+        unsigned int baseIndex = positions3.size() / 4;
+        positions3.insert(positions3.end(), {
+            (finalX1 + px) * screenHeightInv, (finalZ1 + pz) * screenHeightInv, 0.0f, 0.0f,
+            (finalX1 - px) * screenHeightInv, (finalZ1 - pz) * screenHeightInv, 1.0f, 0.0f,
+            (finalX2 - px) * screenHeightInv, (finalZ2 - pz) * screenHeightInv, 1.0f, 1.0f,
+            (finalX2 + px) * screenHeightInv, (finalZ2 + pz) * screenHeightInv, 0.0f, 1.0f,
+            });
+
+        indexBuffer.insert(indexBuffer.end(), {
+            baseIndex, baseIndex + 1, baseIndex + 2,
+            baseIndex + 2, baseIndex + 3, baseIndex
+            });
+    }
+    simulator->storingPositionsMutex.unlock();
+
+    VertexArray va1;
+    VertexBuffer vb(positions3.data(), static_cast<int>(positions3.size() * sizeof(float)));
+    VertexBufferLayout layout;
+    layout.Push<float>(2);
+    layout.Push<float>(2);
+    va1.AddBuffer(vb, layout);
+    IndexBuffer ib1(indexBuffer.data(), static_cast<int>(indexBuffer.size()));
+
+    Draw(va1, ib1, shader, window);
+}
+
 
 void renderer::renderCircle(const Shader& shader) {
     // Define a quad that covers the area where the circle will be rendered
