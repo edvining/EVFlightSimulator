@@ -15,6 +15,15 @@ The project aims to deliver a realistic simulation environment while maintaining
 
 ---
 
+## Installation
+
+- Clone Repository
+- Use Visual Studio with C++ CMake for Windows to Open Folder
+- Allow CMake to compile the project
+- Click Run
+
+---
+
 ## Technology Stack
 
 - **Language:** C++  
