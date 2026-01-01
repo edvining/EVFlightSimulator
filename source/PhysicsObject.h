@@ -194,16 +194,17 @@ struct Burn {
 
 enum AutopilotMode {
 	IDLE,
-	AUTO_ORBIT
+	AUTO_ORBIT,
+	TRANSIT
 };
 
 class Spaceship : public PhysicsObject {
 public:
 	PhysicsObject* targetObject = nullptr;
 	AutopilotMode autopilot = AutopilotMode::IDLE;
-	float propellantAmount = 0.0f;
-	triple currentThrustVector;
-	double currentThrustAmount;
+	double propellantAmount = 0.0;
+	triple currentThrustVector = triple::zero();
+	double currentThrustAmount = 0.0;
 	std::vector<Burn> listOfBurns;
 	Spaceship(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : PhysicsObject(name, m, radius, p, v, contributesToGravSim, refObj) {}
 	Spaceship() : PhysicsObject("Empty", 10, 1, triple::zero(), triple::zero(), false, nullptr){}
@@ -284,7 +285,7 @@ public:
 		if (std::abs(v_radial) > RADIAL_EPS)
 			return; // wait for apoapsis/periapsis
 
-		triple error = v_tangent_vec - v_circ_vec;
+		triple error = vrel - v_circ_vec;
 		if (error.magnitude() < TANGENT_EPS)
 		{
 			autopilot = AutopilotMode::IDLE;

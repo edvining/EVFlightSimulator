@@ -425,8 +425,8 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             }
             ImGui::Text("Simulator Delta T: %.5fs", (linkedSim->timeWarp * linkedSim->myDt) / linkedSim->substeps);
             ImGui::Text("Substeps: %i", linkedSim->substeps);
-            ImGui::DragFloat("Position store Delay: ", &linkedSim->positionStoreDelay, 0.01f, 100.0f);
-            ImGui::DragInt("Number of stored positions: ", &linkedSim->numberOfStoredPositions, 1, 1000);
+            ImGui::DragFloat("Position store Delay", &linkedSim->positionStoreDelay, 0.01f, 100.0f);
+            ImGui::DragInt("Number of stored positions", &linkedSim->numberOfStoredPositions, 1, 1000);
             ImGui::Checkbox("Use Runge-Kutta 4th order method: ", &linkedSim->useRK);
             // Dropdown menu to select an object
             std::vector<PhysicsObject*> vec = linkedSim->allObjects;
@@ -505,6 +505,7 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
     }
     if (showControls) {
         ImGui::Begin("Controls List");
+        ImGui::Text("A spaceship is enroute to the Moon from Earth. \nIt is on an intercept orbit, and will circularize \nwhen it reaches the moon\n\n==Controls List==\n");
         ImGui::Text("F      - Fullscreen");
         ImGui::Text("C      - Show Controls");
         ImGui::Text("M      - Show Mission Data");
