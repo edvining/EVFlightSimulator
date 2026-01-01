@@ -78,6 +78,8 @@ public:
 
     void setMVPMatrix(Shader& shader);
 
+    void setMVPMatrixNoZoom(Shader& shader);
+
     void renderImGui(GravitySimulator* linkedSim);
 
     void renderSimulatorObjects(GravitySimulator* simulator, Shader& shader);

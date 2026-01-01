@@ -213,7 +213,7 @@ public:
 		currentThrustAmount = 0.0;
 		currentThrustVector = triple::zero();
 
-		if (autopilot == AutopilotMode::AUTO_ORBIT && targetObject && RKStep == 1) {
+		if (autopilot == AutopilotMode::AUTO_ORBIT && targetObject) {
 			UpdateAutoOrbit(simTime, dt, RKStep);
 		}
 
@@ -233,7 +233,6 @@ public:
 
 			double thrust = std::min(currentThrustAmount, maxThrustAvailable);
 			AddForce(currentThrustVector * thrust);
-			std::cout << "Thrusting at " << thrust << "N along (" << currentThrustVector.string() << ")" << std::endl;
 		}
 	}
 
@@ -279,7 +278,7 @@ public:
 		double v_circ = std::sqrt(targetObject->mu / rmag);
 		triple v_circ_vec = v_tangent_vec.normalized() * v_circ;
 
-		constexpr double RADIAL_EPS = 10.0;
+		constexpr double RADIAL_EPS = 100.0;
 		constexpr double TANGENT_EPS = 0.1;
 
 		if (std::abs(v_radial) > RADIAL_EPS)
@@ -294,7 +293,7 @@ public:
 
 		triple retrograde = -1*error.normalized();
 
-		double Kp = 0.05;
+		double Kp = 0.5;
 
 		currentThrustVector += retrograde;
 		currentThrustAmount += std::clamp(
@@ -310,7 +309,6 @@ public:
 		// Apply scaled thrust for this timestep
 		currentThrustAmount = currentThrustAmount * (t_safe / dt);
 		currentThrustVector = retrograde;
-		std::cout << "Thrusting at " << currentThrustAmount << "N along (" << currentThrustVector.string() << ")" << std::endl;
 	}
 
 private:

@@ -121,7 +121,9 @@ void renderer::render() {
         shader2.SetUniform4f("u_Colour", 1.0f, 0.0f, 0.0f, 1.0f);
         shader2.Unbind();
         shader3.Bind();
-        shader3.SetUniform4f("u_Colour", 0.0f, 1.0f, 0.0f, 1.0f);
+        float test = 0.0f;
+        test = linkedSim->allObjects[4]->ExternalForces.magnitude() / 100.0f;
+        shader3.SetUniform4f("u_Colour", test, 1.0f, 0.0f, 1.0f);
         shader3.Unbind();
 
         glfwSetScrollCallback(window, scroll_callback);
@@ -150,12 +152,15 @@ void renderer::render() {
             setMVPMatrix(shader);
             setMVPMatrix(shader2);
             setMVPMatrix(shader3);
-            
-            if (linkedSim->showTraces) {
-                renderTrailsLines(linkedSim, shader2);
+
+            {
+                std::lock_guard<std::mutex> guard(linkedSim->storingPositionsMutex);
+                if (linkedSim->showTraces) {
+                    renderTrailsLines(linkedSim, shader2);
+                }
+                renderExternalForces(linkedSim, shader3);
+                renderSimulatorObjects(linkedSim, shader);
             }
-            renderExternalForces(linkedSim, shader3);
-            renderSimulatorObjects(linkedSim, shader);
 
             renderImGui(linkedSim);
             // Handle mouse input (this part is unconventional to place here, usually in the render loop)
@@ -375,6 +380,20 @@ void renderer::setMVPMatrix(Shader& shader) {
     shader.SetUniformMat4f("u_MVP", mvp);
 }
 
+void renderer::setMVPMatrixNoZoom(Shader& shader) {
+    shader.Bind();
+    float aspectRatio = static_cast<float>(scrWidth) / static_cast<float>(scrHeight);
+    /* Projection Matrix */
+    glm::mat4 proj = glm::ortho(-aspectRatio, +aspectRatio, -1.0f, +1.0f, -1.0f, +1.0f);
+    /* View Matrix - Move the camera around */
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+    /* Model Matrix - Move the model around */
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+    /* Combine into an MVP */
+    glm::mat4 mvp = proj * view * model;
+    shader.SetUniformMat4f("u_MVP", mvp);
+}
+
 void renderer::renderImGui(GravitySimulator* linkedSim) {
     //// Start ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
@@ -554,33 +573,7 @@ void renderer::renderSimulatorObjects(GravitySimulator* simulator, Shader& shade
 
     centre[0] = simulator->viewPosX + ((simulator->deltaX) * simulator->zoomLevel * screenHeightInv);
     centre[1] = simulator->viewPosY + ((-simulator->deltaY) * simulator->zoomLevel * screenHeightInv);
-    /*for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
-    {
-        float _va1l = simulator->allObjects[i]->radius;
-        if (_va1l * 2 / zoomLevel < 1.5f)
-        {
-            _va1l = zoomLevel * 2.0f;
-        }
-        float objX, objY, objZ;
-        if (simulator->selectedObject == 0) {
-            objX = (float)(simulator->allObjects[i]->p.x + centre[0] * screen_height);
-            objY = (float)(simulator->allObjects[i]->p.y + centre[1] * screen_height);
-            objZ = (float)(simulator->allObjects[i]->p.z + centre[1] * screen_height);
-        }
-        else {
-            objX = (float)(simulator->allObjects[i]->p.x - simulator->selectedObject->p.x + centre[0] * screen_height);
-            objY = (float)(simulator->allObjects[i]->p.y - simulator->selectedObject->p.y + centre[1] * screen_height);
-            objZ = (float)(simulator->allObjects[i]->p.z - simulator->selectedObject->p.z + centre[1] * screen_height);
-        }
-        positions3.insert(positions3.end(), {
-            (-_va1l + objX) * screenHeightInv, (-_va1l + objY) * screenHeightInv, 0.0f, 0.0f,
-            (_va1l + objX) * screenHeightInv, (-_va1l + objY) * screenHeightInv, 1.0f, 0.0f,
-            (_va1l + objX) * screenHeightInv, (_va1l + objY) * screenHeightInv, 1.0f, 1.0f,
-            (-_va1l + objX) * screenHeightInv, (_va1l + objY) * screenHeightInv, 0.0f, 1.0f });
-        indexBuffer.insert(indexBuffer.end(),
-            { (0 + 4 * i), (1 + 4 * i), (2 + 4 * i),
-            (2 + 4 * i), (3 + 4 * i), (0 + 4 * i) });
-    }*/
+    
     int selectedObjIndex;
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
@@ -595,15 +588,19 @@ void renderer::renderSimulatorObjects(GravitySimulator* simulator, Shader& shade
 
         // Calculate the object's position relative to the selected object
         double objX, objY, objZ;
+		
         if (simulator->selectedObject == 0) {
-            objX = (simulator->allObjects[i]->p.x);
-            objY = (simulator->allObjects[i]->p.y);
-            objZ = (simulator->allObjects[i]->p.z);
+            triple lastPos = simulator->allObjects[i]->p;
+            objX = (lastPos.x);
+            objY = (lastPos.y);
+            objZ = (lastPos.z);
         }
         else {
-            objX = (simulator->allObjects[i]->p.x - simulator->selectedObject->p.x);
-            objY = (simulator->allObjects[i]->p.y - simulator->selectedObject->p.y);
-            objZ = (simulator->allObjects[i]->p.z - simulator->selectedObject->p.z);
+            triple lastPos = simulator->allObjects[i]->p;
+			triple selectedPos = simulator->selectedObject->p;
+            objX = (lastPos.x - selectedPos.x);
+            objY = (lastPos.y - selectedPos.y);
+            objZ = (lastPos.z - selectedPos.z);
         }
 
         // Apply camera rotation with Z as the up-down axis
@@ -663,7 +660,6 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
     unsigned int baseIndex = 0;
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
-        simulator->allObjects[i]->storingMutex.lock();
         if (!simulator->allObjects[i]->pastPositions.empty()) {
             for (unsigned int j = 0; j < simulator->allObjects[i]->pastPositions.size(); j++)
             {
@@ -718,7 +714,6 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
                     (_va1l + finalX) * screenHeightInv, (-_va1l + finalZ) * screenHeightInv, 1.0f, 0.0f,
                     (_va1l + finalX) * screenHeightInv, (_va1l + finalZ) * screenHeightInv, 1.0f, 1.0f,
                     (-_va1l + finalX) * screenHeightInv, (_va1l + finalZ) * screenHeightInv, 0.0f, 1.0f });
-
                 baseIndex += 4;
 
                 // Add indices for the current quad
@@ -727,7 +722,6 @@ void renderer::renderTrails(GravitySimulator* simulator, Shader& shader) {
                       baseIndex + 2, baseIndex + 3, baseIndex });
             }
         }
-        simulator->allObjects[i]->storingMutex.unlock();
     }
 
     VertexArray va1;
@@ -749,17 +743,16 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
     centre[0] = simulator->viewPosX + ((simulator->deltaX) * simulator->zoomLevel * screenHeightInv);
     centre[1] = simulator->viewPosY + ((-simulator->deltaY) * simulator->zoomLevel * screenHeightInv);
 
-    simulator->storingPositionsMutex.lock();
+    
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
         if (!simulator->allObjects[i]->pastPositions.empty())
         {
             unsigned int baseIndex = positions3.size()/4;
-            
+            unsigned int lastIndex = simulator->allObjects[i]->pastPositions.size();
             // Use current position as the end of the last segment.
             triple currentPosition = simulator->allObjects[i]->p;
-           
-           for (unsigned int j = 0; j < simulator->allObjects[i]->pastPositions.size(); j++)
+            for (unsigned int j = 0; j < lastIndex; j++)
             {
                 float _va1l = simulator->allObjects[i]->radius * 0.5f;
                 if (_va1l / simulator->zoomLevel < 1)
@@ -770,7 +763,7 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
                 triple pastPosition1,pastPosition2, referencePosition1, referencePosition2, referenceCurrentPosition;
                 pastPosition1 = simulator->allObjects[i]->pastPositions[j];
                
-               if(j == simulator->allObjects[i]->pastPositions.size() - 1)
+                if(j == lastIndex - 1)
                 {
                     pastPosition2 = currentPosition;
                 }
@@ -778,10 +771,10 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
                      pastPosition2 = simulator->allObjects[i]->pastPositions[j+1];
                 }
 
-                 if (simulator->referenceObject != nullptr)
+                if (simulator->referenceObject != nullptr)
                 {
                    referencePosition1 = simulator->referenceObject->pastPositions[j];
-                   if(j == simulator->allObjects[i]->pastPositions.size() - 1)
+                   if(j == lastIndex - 1)
                    {
                       referencePosition2 = simulator->referenceObject->p;
                    }
@@ -794,7 +787,7 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
                 if (simulator->allObjects[i]->referenceObject != nullptr)
                 {
                     referencePosition1 = simulator->allObjects[i]->referenceObject->pastPositions[j];
-                    if(j == simulator->allObjects[i]->pastPositions.size() - 1)
+                    if(j == lastIndex - 1)
                     {
                         referencePosition2 = simulator->allObjects[i]->referenceObject->p;
                     }
@@ -868,12 +861,10 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader) {
                 indexBuffer.insert(indexBuffer.end(),
                     { baseIndex + j * 4, baseIndex + j * 4 + 1, baseIndex + j * 4 + 2,
                         baseIndex + j * 4 + 2, baseIndex + j * 4 + 3, baseIndex + j * 4 });
-
             }
         }
         
     }
-    simulator->storingPositionsMutex.unlock();
     VertexArray va1;
     VertexBuffer vb(positions3.data(), static_cast<int>(positions3.size() * sizeof(float)));
     VertexBufferLayout layout;
@@ -895,25 +886,28 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
     centre[1] = simulator->viewPosY + (-simulator->deltaY * simulator->zoomLevel * screenHeightInv);
 
     const float maxVisibleForce = 100.0f; // Force that fills full visible length
-    const float lineLength = 50.0f;        // Maximum length on screen for max force (pixels)
-    const float pixelThickness = 1.5f;     // desired line thickness in pixels
+    const float lineLength = 100.0f;        // Maximum length on screen for max force (pixels)
+    const float pixelThickness = 1.0f;     // desired line thickness in pixels
 
     // Convert pixels -> world units so length/thickness stay constant across zooms.
     // Orthographic projection used: total world height = 2 * zoomLevel maps to scrHeight pixels
-    const float worldUnitsPerPixel = (2.0f * simulator->zoomLevel) / static_cast<float>(scrHeight);
+    const float worldUnitsPerPixel = (simulator->zoomLevel);
 
-    simulator->storingPositionsMutex.lock();
+
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
         triple pos = simulator->allObjects[i]->p;
         triple force = simulator->allObjects[i]->ExternalForces; // total external force
 
-        // Optional: subtract reference / selected object if needed
+        // Optional: subtract reference object position (keep original behaviour)
         if (simulator->selectedObject != nullptr && simulator->selectedObject->referenceObject != nullptr)
         {
             pos.x -= simulator->selectedObject->referenceObject->p.x;
             pos.y -= simulator->selectedObject->referenceObject->p.y;
             pos.z -= simulator->selectedObject->referenceObject->p.z;
+            pos.x -= simulator->selectedObject->p.x - simulator->selectedObject->referenceObject->p.x;
+            pos.y -= simulator->selectedObject->p.y - simulator->selectedObject->referenceObject->p.y;
+            pos.z -= simulator->selectedObject->p.z - simulator->selectedObject->referenceObject->p.z;
         }
 
         // Map force magnitude -> desired pixel length (clamped)
@@ -926,35 +920,44 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
         if (desiredPixels < 1.0f) desiredPixels = 1.0f;
 
         // Convert desired length in pixels to world units so it's stable under zoom
-        float worldLineLen = desiredPixels * worldUnitsPerPixel;
+        float worldLineLen = 2.0f * desiredPixels * worldUnitsPerPixel;
 
         // Build a world-space force direction scaled to worldLineLen
         float fx = (force.x / forceMag) * worldLineLen;
         float fy = (force.y / forceMag) * worldLineLen;
         float fz = (force.z / forceMag) * worldLineLen;
 
-        // Apply camera yaw (Z) rotation to the force vector (Z-up)
+        // Camera yaw (Z) rotation
         double cosZ = cos(simulator->cameraRotationY);
         double sinZ = sin(simulator->cameraRotationY);
 
-        double tempX = fx * cosZ - fy * sinZ;
-        double tempY = fx * sinZ + fy * cosZ;
-        double tempZ = fz;
+        // Rotate BOTH the object position and the force vector by the yaw so they live in same camera-space
+        double posX_rot = pos.x * cosZ - pos.y * sinZ;
+        double posY_rot = pos.x * sinZ + pos.y * cosZ;
+
+        double fx_rot = fx * cosZ - fy * sinZ;
+        double fy_rot = fx * sinZ + fy * cosZ;
+        double fz_rot = fz;
 
         // Camera pitch (X)
         float cosX = cos(simulator->cameraRotationX);
         float sinX = sin(simulator->cameraRotationX);
 
+        // Apply pitch rotation to the force's Y/Z components (this was missing)
+        float forceY_afterPitch = static_cast<float>(fy_rot * cosX - fz_rot * sinX);
+        float forceZ_afterPitch = static_cast<float>(fy_rot * sinX + fz_rot * cosX);
+
         // Compute final positions in same space used elsewhere in renderer (world-like coordinates)
-        float finalX1 = (float)(pos.x + centre[0] * scrHeight);
-        float finalY1 = (float)(pos.y * cosX - pos.z * sinX);
-        float finalZ1 = (float)(pos.y * sinX + pos.z * cosX + centre[1] * scrHeight);
+        float finalX1 = static_cast<float>(posX_rot + centre[0] * scrHeight);
+        float finalY1 = static_cast<float>(posY_rot * cosX - pos.z * sinX);
+        float finalZ1 = static_cast<float>(posY_rot * sinX + pos.z * cosX + centre[1] * scrHeight);
 
-        float finalX2 = (float)(pos.x + tempX + centre[0] * scrHeight);
-        float finalY2 = (float)(tempY + pos.y * cosX - pos.z * sinX);
-        float finalZ2 = (float)(tempZ + pos.y * sinX + pos.z * cosX + centre[1] * scrHeight);
+        // Add the pitched force contribution to the endpoints
+        float finalX2 = static_cast<float>(posX_rot + fx_rot + centre[0] * scrHeight);
+        float finalY2 = static_cast<float>(forceY_afterPitch + posY_rot * cosX - pos.z * sinX);
+        float finalZ2 = static_cast<float>(forceZ_afterPitch + posY_rot * sinX + pos.z * cosX + centre[1] * scrHeight);
 
-        // Calculate direction in renderer space and normalize
+        // Calculate direction in renderer space and normalize (using X,Z as in other render code)
         float dx = finalX2 - finalX1;
         float dz = finalZ2 - finalZ1;
         float length = std::sqrt(dx * dx + dz * dz);
@@ -984,7 +987,6 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
             baseIndex + 2, baseIndex + 3, baseIndex
             });
     }
-    simulator->storingPositionsMutex.unlock();
 
     VertexArray va1;
     VertexBuffer vb(positions3.data(), static_cast<int>(positions3.size() * sizeof(float)));
@@ -996,7 +998,6 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
 
     Draw(va1, ib1, shader, window);
 }
-
 
 void renderer::renderCircle(const Shader& shader) {
     // Define a quad that covers the area where the circle will be rendered

@@ -325,6 +325,7 @@ public:
                     CalculateForce(i, j);
                 }
             }
+            CalculateExternalForce(i);
         }
     }
 
