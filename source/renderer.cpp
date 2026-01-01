@@ -415,7 +415,7 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             int mins = linkedSim->minutes;
             double secs = linkedSim->seconds;
             if (years < 1) {
-                ImGui::Text("Elapsed Time: %i days %02i:%02i:%06.3f (Timewarp %.0fx)", days, hrs, mins, secs, linkedSim->timeWarp);
+                ImGui::Text("Elapsed Time: %i days %02i:%02i:%06.3f (Timewarp %.2fx)", days, hrs, mins, secs, linkedSim->timeWarp);
             }
             else if (years == 1) {
                 ImGui::Text("Elapsed Time: %i year %i days %02i:%02i:%06.3f (Timewarp %.0fx)", years, days, hrs, mins, secs, linkedSim->timeWarp);
@@ -883,8 +883,8 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
     centre[1] = simulator->viewPosY + (-simulator->deltaY * simulator->zoomLevel * screenHeightInv);
 
     const float maxVisibleForce = 100.0f; // Force that fills full visible length
-    const float lineLength = 100.0f;        // Maximum length on screen for max force (pixels)
-    const float pixelThickness = 1.0f;     // desired line thickness in pixels
+    const float lineLength = 1000.0f;        // Maximum length on screen for max force (pixels)
+    const float pixelThickness = 2.0f;     // desired line thickness in pixels
 
     // Convert pixels -> world units so length/thickness stay constant across zooms.
     // Orthographic projection used: total world height = 2 * zoomLevel maps to scrHeight pixels

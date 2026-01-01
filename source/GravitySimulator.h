@@ -71,6 +71,7 @@ public:
     double cameraRotationX = 0.0f;
     double cameraRotationY = 0.0f;
     double timeWarp = 1;
+	double oldTimeWarp = 1;
     double myDt = 0;
     bool paused = false;
     bool storingPositions = true;
@@ -104,6 +105,18 @@ public:
         for (PhysicsObject* obj : allObjects)
         {
             obj->PreForceUpdate(simTime, dt, RKStep);
+			if (obj->request1xTimeWarp)
+            {
+                obj->request1xTimeWarp = false;
+				oldTimeWarp = timeWarp;
+                timeWarp = 1.0;
+            }
+            if (obj->resumeTimeWarp) 
+            {
+				obj->resumeTimeWarp = false;
+				obj->request1xTimeWarp = false;
+				timeWarp = oldTimeWarp;
+            }
         }
     }
 

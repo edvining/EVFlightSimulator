@@ -28,6 +28,9 @@ public:
 	int referenceObjectIndex = 0;
 	bool firstIter = true;
 	bool contributesToGravity = true;
+	bool request1xTimeWarp = false;
+	bool requestedAlready = false;
+	bool resumeTimeWarp = false;
 	/// <summary>
 	/// Mass, radius, position, velocity
 	/// </summary>
@@ -280,15 +283,23 @@ public:
 		triple v_circ_vec = v_tangent_vec.normalized() * v_circ;
 
 		constexpr double RADIAL_EPS = 100.0;
-		constexpr double TANGENT_EPS = 0.1;
+		constexpr double ERROR_EPS = 1.0;
+
+		if (std::abs(v_radial) < 150 && !request1xTimeWarp && !requestedAlready)
+		{
+			request1xTimeWarp = true;
+			requestedAlready = true;
+		}
 
 		if (std::abs(v_radial) > RADIAL_EPS)
 			return; // wait for apoapsis/periapsis
-
 		triple error = vrel - v_circ_vec;
-		if (error.magnitude() < TANGENT_EPS)
+		if (error.magnitude() < ERROR_EPS)
 		{
 			autopilot = AutopilotMode::IDLE;
+			resumeTimeWarp = true;
+			requestedAlready = false;
+			std::cout << "Manoeuvre Complete" << std::endl;
 			return;
 		}
 
