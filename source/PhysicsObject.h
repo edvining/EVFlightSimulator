@@ -211,4 +211,24 @@ public:
 		this->p = refObj->p + rt;
 		this->v = refObj->v + rdot;
 	}
+
+	virtual triple GetExternalForces() const {
+		return ExternalForces;
+	}
+};
+
+class Spaceship : public PhysicsObject {
+public:
+	float propellantAmount = 0.0f;
+	triple currentThrustVector;
+	double currentThrustAmount;
+	Spaceship(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : PhysicsObject(name, m, radius, p, v, contributesToGravity, refObj) {}
+	Spaceship() : PhysicsObject("Empty", 10, 1, triple::zero(), triple::zero(), false, nullptr){}
+
+	virtual triple GetExternalForces() const {
+		double thrust = std::min(maxThrustAvailable, currentThrustAmount);
+		return ExternalForces + currentThrustVector * thrust;
+	}
+private:
+	double maxThrustAvailable = 100.0f;
 };
