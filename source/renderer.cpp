@@ -895,29 +895,45 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
     centre[1] = simulator->viewPosY + (-simulator->deltaY * simulator->zoomLevel * screenHeightInv);
 
     const float maxVisibleForce = 100.0f; // Force that fills full visible length
-    const float lineLength = 50.0f;        // Maximum length on screen for max force
+    const float lineLength = 50.0f;        // Maximum length on screen for max force (pixels)
+    const float pixelThickness = 1.5f;     // desired line thickness in pixels
+
+    // Convert pixels -> world units so length/thickness stay constant across zooms.
+    // Orthographic projection used: total world height = 2 * zoomLevel maps to scrHeight pixels
+    const float worldUnitsPerPixel = (2.0f * simulator->zoomLevel) / static_cast<float>(scrHeight);
 
     simulator->storingPositionsMutex.lock();
     for (unsigned int i = 0; i < simulator->allObjects.size(); i++)
     {
         triple pos = simulator->allObjects[i]->p;
-        triple force = simulator->allObjects[i]->ExternalForces; // Should be total external force
+        triple force = simulator->allObjects[i]->ExternalForces; // total external force
 
         // Optional: subtract reference / selected object if needed
-        if (simulator->selectedObject->referenceObject != nullptr)
+        if (simulator->selectedObject != nullptr && simulator->selectedObject->referenceObject != nullptr)
         {
             pos.x -= simulator->selectedObject->referenceObject->p.x;
             pos.y -= simulator->selectedObject->referenceObject->p.y;
             pos.z -= simulator->selectedObject->referenceObject->p.z;
         }
 
-        // Scale force for visual representation
-        float scale = lineLength / maxVisibleForce;
-        float fx = force.x * scale;
-        float fy = force.y * scale;
-        float fz = force.z * scale;
+        // Map force magnitude -> desired pixel length (clamped)
+        float forceMag = std::sqrt(force.x * force.x + force.y * force.y + force.z * force.z);
+        if (forceMag <= 1e-9f) {
+            continue; // nothing to draw
+        }
+        float desiredPixels = (forceMag / maxVisibleForce) * lineLength;
+        if (desiredPixels > lineLength) desiredPixels = lineLength;
+        if (desiredPixels < 1.0f) desiredPixels = 1.0f;
 
-        // Apply camera rotation (Z-up)
+        // Convert desired length in pixels to world units so it's stable under zoom
+        float worldLineLen = desiredPixels * worldUnitsPerPixel;
+
+        // Build a world-space force direction scaled to worldLineLen
+        float fx = (force.x / forceMag) * worldLineLen;
+        float fy = (force.y / forceMag) * worldLineLen;
+        float fz = (force.z / forceMag) * worldLineLen;
+
+        // Apply camera yaw (Z) rotation to the force vector (Z-up)
         double cosZ = cos(simulator->cameraRotationY);
         double sinZ = sin(simulator->cameraRotationY);
 
@@ -925,9 +941,11 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
         double tempY = fx * sinZ + fy * cosZ;
         double tempZ = fz;
 
+        // Camera pitch (X)
         float cosX = cos(simulator->cameraRotationX);
         float sinX = sin(simulator->cameraRotationX);
 
+        // Compute final positions in same space used elsewhere in renderer (world-like coordinates)
         float finalX1 = (float)(pos.x + centre[0] * scrHeight);
         float finalY1 = (float)(pos.y * cosX - pos.z * sinX);
         float finalZ1 = (float)(pos.y * sinX + pos.z * cosX + centre[1] * scrHeight);
@@ -936,8 +954,7 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
         float finalY2 = (float)(tempY + pos.y * cosX - pos.z * sinX);
         float finalZ2 = (float)(tempZ + pos.y * sinX + pos.z * cosX + centre[1] * scrHeight);
 
-        // Simple line as a quad of width _va1l (optional, for thicker lines)
-        float _va1l = 1.5f; // Line thickness in pixels
+        // Calculate direction in renderer space and normalize
         float dx = finalX2 - finalX1;
         float dz = finalZ2 - finalZ1;
         float length = std::sqrt(dx * dx + dz * dz);
@@ -947,8 +964,12 @@ void renderer::renderExternalForces(GravitySimulator* simulator, Shader& shader)
             dz /= length;
         }
 
-        float px = -dz * _va1l;
-        float pz = dx * _va1l;
+        // Convert pixel thickness to renderer world units (same space as finalX/finalZ)
+        float thicknessWorld = pixelThickness * worldUnitsPerPixel;
+
+        // Perpendicular offset in renderer space (world units)
+        float px = -dz * thicknessWorld;
+        float pz = dx * thicknessWorld;
 
         unsigned int baseIndex = positions3.size() / 4;
         positions3.insert(positions3.end(), {
