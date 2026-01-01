@@ -58,7 +58,7 @@ public:
     bool useRK = true;
     bool useRKF = false;
     bool showTraces = true;
-    int RKStep = 1;
+    int RKStep = 0;
     int RKFStep = 1;
     int numberOfCalculationsPerThread = 0;
     float zoomLevel = 1;
@@ -95,32 +95,16 @@ public:
         }
     }
 
-    void RKFSimStep(double dt)
-    {
-        switch (RKFStep) {
-        case 1: for (PhysicsObject* object : allObjects) {
-            object->RKFStep1(dt);
-        }break;
-        case 2: for (PhysicsObject* object : allObjects) {
-            object->RKFStep2(dt);
-        }break;
-        case 3: for (PhysicsObject* object : allObjects) {
-            object->RKFStep3(dt);
-        }break;
-        case 4: for (PhysicsObject* object : allObjects) {
-            object->RKFStep4(dt);
-        }break;
-        case 5: for (PhysicsObject* object : allObjects) {
-            object->RKFStep5(dt);
-        }break;
-        case 6: for (PhysicsObject* object : allObjects) {
-            object->RKFStep6(dt);
-        }break;
-        }
-    }
-
     static double GetLightSpeed() {
         return LIGHTSPEED;
+    }
+
+    void PreForceUpdateAll(double simTime, double dt)
+    {
+        for (PhysicsObject* obj : allObjects)
+        {
+            obj->PreForceUpdate(simTime, dt, RKStep);
+        }
     }
 
     void RunSimulation(double inputdt, int substeps)
@@ -140,6 +124,7 @@ public:
                     nextStorageTime = timeElapsed + positionStoreDelay;
                     oldPositionStoreDelay = positionStoreDelay;
                 }
+                PreForceUpdateAll(timeElapsed, dt / substeps);
                 switch (type) {
                 case 0:   CalculateForces();      break;
                 case 1:   CalculateForcesMT();    break;
@@ -185,123 +170,62 @@ public:
             }
             else
             {
-                if (!useRKF)
+                if (oldPositionStoreDelay != positionStoreDelay) {
+                    nextStorageTime = timeElapsed + positionStoreDelay;
+                    oldPositionStoreDelay = positionStoreDelay;
+                }
+                for (RKStep = 1; RKStep < 5; RKStep++)
                 {
-                    if (oldPositionStoreDelay != positionStoreDelay) {
-                        nextStorageTime = timeElapsed + positionStoreDelay;
-                        oldPositionStoreDelay = positionStoreDelay;
+                    PreForceUpdateAll(timeElapsed, dt / substeps);
+                    switch (type) {
+                    case 0:   CalculateForces();      break;
+                    case 1:   CalculateForcesMT();    break;
+                    case 2:   CalculateForcesWorker();    break;
+                    case 3:   CalculateForcesModified();  break;
                     }
-                    for (RKStep = 1; RKStep < 5; RKStep++)
-                    {
-                        switch (type) {
-                        case 0:   CalculateForces();      break;
-                        case 1:   CalculateForcesMT();    break;
-                        case 2:   CalculateForcesWorker();    break;
-                        case 3:   CalculateForcesModified();  break;
-                        }
-                        RKSimStep(dt / substeps);
-                    }
-                    SolveDistanceConstraints();
-                    timeElapsed += dt / substeps;
-                    seconds += dt / substeps;
-                    if (seconds >= 60.0) {
-                        minutes += static_cast<int>(seconds) / 60;
-                        seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
+                    RKSimStep(dt / substeps);
+                }
+                SolveDistanceConstraints();
+                timeElapsed += dt / substeps;
+                seconds += dt / substeps;
+                if (seconds >= 60.0) {
+                    minutes += static_cast<int>(seconds) / 60;
+                    seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
 
-                        if (minutes >= 60) {
-                            hours += minutes / 60;
-                            minutes %= 60; // Remainder after dividing by 60
-                        }
-
-                        if (hours >= 24) {
-                            days += hours / 24;
-                            hours %= 24; // Remainder after dividing by 24
-                        }
-
-                        if (days >= 365) {
-                            years += days / 365;
-                            days %= 365; // Remainder after dividing by 365
-                        }
+                    if (minutes >= 60) {
+                        hours += minutes / 60;
+                        minutes %= 60; // Remainder after dividing by 60
                     }
-                    if (timeElapsed > nextStorageTime && storingPositions) {
-                        storingPositionsMutex.lock();
-                        for (PhysicsObject* object : allObjects)
-                        {
-                            object->StoreCurrentPosition(numberOfStoredPositions);
-                            object->ClearForce();
-                        }
-                        storingPositionsMutex.unlock();
-                        if (positionStoreDelay < dt / substeps) {
-                            nextStorageTime += dt / substeps;
-                        }
-                        else { nextStorageTime += positionStoreDelay; }
+
+                    if (hours >= 24) {
+                        days += hours / 24;
+                        hours %= 24; // Remainder after dividing by 24
                     }
-                    else {
-                        for (PhysicsObject* object : allObjects)
-                        {
-                            object->ClearForce();
-                        }
+
+                    if (days >= 365) {
+                        years += days / 365;
+                        days %= 365; // Remainder after dividing by 365
                     }
                 }
-                else
-                {
-                    if (oldPositionStoreDelay != positionStoreDelay) {
-                        nextStorageTime = timeElapsed + positionStoreDelay;
-                        oldPositionStoreDelay = positionStoreDelay;
-                    }
-                    for (RKFStep = 1; RKFStep < 7; RKFStep++)
+                if (timeElapsed > nextStorageTime && storingPositions) {
+                    storingPositionsMutex.lock();
+                    for (PhysicsObject* object : allObjects)
                     {
-                        switch (type) {
-                        case 0:   CalculateForces();      break;
-                        case 1:   CalculateForcesMT();    break;
-                        case 2:   CalculateForcesWorker();    break;
-                        case 3:   CalculateForcesModified();  break;
-                        }
-                        RKFSimStep(dt / substeps);
+                        object->StoreCurrentPosition(numberOfStoredPositions);
+                        object->ClearForce();
                     }
-                    SolveDistanceConstraints();
-                    timeElapsed += dt / substeps;
-                    seconds += dt / substeps;
-                    if (seconds >= 60.0) {
-                        minutes += static_cast<int>(seconds) / 60;
-                        seconds = fmod(seconds, 60.0); // Remainder after dividing by 60
-
-                        if (minutes >= 60) {
-                            hours += minutes / 60;
-                            minutes %= 60; // Remainder after dividing by 60
-                        }
-
-                        if (hours >= 24) {
-                            days += hours / 24;
-                            hours %= 24; // Remainder after dividing by 24
-                        }
-
-                        if (days >= 365) {
-                            years += days / 365;
-                            days %= 365; // Remainder after dividing by 365
-                        }
+                    storingPositionsMutex.unlock();
+                    if (positionStoreDelay < dt / substeps) {
+                        nextStorageTime += dt / substeps;
                     }
-                    if (timeElapsed > nextStorageTime && storingPositions) {
-                        storingPositionsMutex.lock();
-                        for (PhysicsObject* object : allObjects)
-                        {
-                            object->StoreCurrentPosition(numberOfStoredPositions);
-                            object->ClearForce();
-                        }
-                        storingPositionsMutex.unlock();
-                        if (positionStoreDelay < dt / substeps) {
-                            nextStorageTime += dt / substeps;
-                        }
-                        else { nextStorageTime += positionStoreDelay; }
-                    }
-                    else {
-                        for (PhysicsObject* object : allObjects)
-                        {
-                            object->ClearForce();
-                        }
+                    else { nextStorageTime += positionStoreDelay; }
+                }
+                else {
+                    for (PhysicsObject* object : allObjects)
+                    {
+                        object->ClearForce();
                     }
                 }
-
             }
         }
         for (PhysicsObject* object : allObjects)
@@ -661,129 +585,53 @@ public:
         }
         else
         {
-            if (!useRKF)
+            switch (RKStep)
             {
-                switch (RKStep)
-                {
-                case 1:
-                {
-                    triple displacement = object2->p - object1->p;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a1 += force * object2->m;
-                    object2->a1 -= force * object1->m;
-                    object1->a1 += object1->GetExternalForces() / object1->m;
-                    object2->a1 += object2->GetExternalForces() / object2->m;
-
-
-                }break;
-                case 2:
-                {
-                    triple displacement = object2->p2 - object1->p2;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a2 += force * object2->m;
-                    object2->a2 -= force * object1->m;
-                    object1->a2 += object1->GetExternalForces() / object1->m;
-                    object2->a2 += object2->GetExternalForces() / object2->m;
-
-                }break;
-                case 3:
-                {
-                    triple displacement = object2->p3 - object1->p3;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a3 += force * object2->m;
-                    object2->a3 -= force * object1->m;
-                    object1->a3 += object1->GetExternalForces() / object1->m;
-                    object2->a3 += object2->GetExternalForces() / object2->m;
-
-                }break;
-                case 4:
-                {
-                    triple displacement = object2->p4 - object1->p4;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a4 += force * object2->m;
-                    object2->a4 -= force * object1->m;
-                    object1->a4 += object1->GetExternalForces() / object1->m;
-                    object2->a4 += object2->GetExternalForces() / object2->m;
-
-                }break;
-                }
-            }
-            else
+            case 1:
             {
-                switch (RKFStep)
-                {
-                case 1:
-                {
-                    triple displacement = object2->p - object1->p;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a1 += force * object2->m;
-                    object2->a1 -= force * object1->m;
-                    object1->a1 += object1->GetExternalForces() / object1->m;
-                    object2->a1 += object2->GetExternalForces() / object2->m;
+                triple displacement = object2->p - object1->p;
+                double magnitude = displacement.magnitude();
+                triple force = (G * displacement) / (magnitude * magnitude * magnitude);
+                object1->a1 += force * object2->m;
+                object2->a1 -= force * object1->m;
+                object1->a1 += object1->GetExternalForces() / object1->m;
+                object2->a1 += object2->GetExternalForces() / object2->m;
 
 
-                }break;
-                case 2:
-                {
-                    triple displacement = object2->p2 - object1->p2;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a2 += force * object2->m;
-                    object2->a2 -= force * object1->m;
-                    object1->a2 += object1->GetExternalForces() / object1->m;
-                    object2->a2 += object2->GetExternalForces() / object2->m;
+            }break;
+            case 2:
+            {
+                triple displacement = object2->p2 - object1->p2;
+                double magnitude = displacement.magnitude();
+                triple force = (G * displacement) / (magnitude * magnitude * magnitude);
+                object1->a2 += force * object2->m;
+                object2->a2 -= force * object1->m;
+                object1->a2 += object1->GetExternalForces() / object1->m;
+                object2->a2 += object2->GetExternalForces() / object2->m;
 
-                }break;
-                case 3:
-                {
-                    triple displacement = object2->p3 - object1->p3;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a3 += force * object2->m;
-                    object2->a3 -= force * object1->m;
-                    object1->a3 += object1->GetExternalForces() / object1->m;
-                    object2->a3 += object2->GetExternalForces() / object2->m;
+            }break;
+            case 3:
+            {
+                triple displacement = object2->p3 - object1->p3;
+                double magnitude = displacement.magnitude();
+                triple force = (G * displacement) / (magnitude * magnitude * magnitude);
+                object1->a3 += force * object2->m;
+                object2->a3 -= force * object1->m;
+                object1->a3 += object1->GetExternalForces() / object1->m;
+                object2->a3 += object2->GetExternalForces() / object2->m;
 
-                }break;
-                case 4:
-                {
-                    triple displacement = object2->p4 - object1->p4;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a4 += force * object2->m;
-                    object2->a4 -= force * object1->m;
-                    object1->a4 += object1->GetExternalForces() / object1->m;
-                    object2->a4 += object2->GetExternalForces() / object2->m;
+            }break;
+            case 4:
+            {
+                triple displacement = object2->p4 - object1->p4;
+                double magnitude = displacement.magnitude();
+                triple force = (G * displacement) / (magnitude * magnitude * magnitude);
+                object1->a4 += force * object2->m;
+                object2->a4 -= force * object1->m;
+                object1->a4 += object1->GetExternalForces() / object1->m;
+                object2->a4 += object2->GetExternalForces() / object2->m;
 
-                }break;
-                case 5:
-                {
-                    triple displacement = object2->p5 - object1->p5;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a5 += force * object2->m;
-                    object2->a5 -= force * object1->m;
-                    object1->a5 += object1->GetExternalForces() / object1->m;
-                    object2->a5 += object2->GetExternalForces() / object2->m;
-
-                }break;
-                case 6:
-                {
-                    triple displacement = object2->p6 - object1->p6;
-                    double magnitude = displacement.magnitude();
-                    triple force = (G * displacement) / (magnitude * magnitude * magnitude);
-                    object1->a6 += force * object2->m;
-                    object2->a6 -= force * object1->m;
-                    object1->a6 += object1->GetExternalForces() / object1->m;
-                    object2->a6 += object2->GetExternalForces() / object2->m;
-
-                }break;
-                }
+            }break;
             }
         }
     }
@@ -1069,6 +917,7 @@ public:
         std::erase(gravitationalObjects, object);
         std::erase(physicsObjects, object);
     }
+    
     int GetNumberOfObjects()
     {
         return (int)allObjects.size();

@@ -426,8 +426,13 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             // Display the selected object's distance
             double distance = linkedSim->selectedObject->p.magnitude();
             ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
-            ImGui::Text("Current Speed: %.5f m/s (%.5fc)", (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude(), (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).magnitude() / 299792458.0);
-            
+            triple currentV = (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v);
+            ImGui::Text("Current Speed: %.5f m/s (%.5fc)", currentV.magnitude(), currentV.magnitude() / 299792458.0);
+            triple radialV = (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).onto((linkedSim->selectedObject->p - linkedSim->selectedObject->referenceObject->p).normalized());
+            ImGui::Text("Radial Speed: %.5f m/s (%.5fc)", radialV.magnitude(), radialV.magnitude() / 299792458.0);
+            triple tangenV = currentV - radialV;
+            ImGui::Text("Tangential Speed: %.5f m/s (%.5fc)", tangenV.magnitude(), tangenV.magnitude() / 299792458.0);
+
             // Render the dropdown
             if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
                 // Optional: Handle object selection changes

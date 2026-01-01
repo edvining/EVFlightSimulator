@@ -143,10 +143,12 @@ void MoonMission() {
     PhysicsObject mars("Mars", 6.4171e23f, 3389920.0f, { 1.838132282343054E+11, 1.077250455786663E+11, -2.233343150142968E+09 },
         { -1.132073342589737E+04, 2.296074025888803E+04, 7.591572611068891E+02 });
     simulator.AddObject(&mars);
-    Spaceship spaceship("Spaceship", 20.0f, 10000.0f, earth.p + triple{ 100000 + 6378137, 0, -50000 },
+    auto* spaceship = new Spaceship("Spaceship", 1.0f, 10000.0f, earth.p + triple{ 100000 + 6378137, 0, -50000 },
         /*{ 0, 0, 0 }*/earth.v + triple{ 1100, 10960, 1000 });
-    simulator.AddObject(&spaceship);
-    spaceship.referenceObject = &earth;
+    spaceship->AddBurn(triple{0.0, 1.0, 0.0}, 100.0, 10.0, 0.0);
+    spaceship->AutoOrbit(&moon);
+    simulator.AddObject(spaceship);
+    spaceship->referenceObject = &earth;
     PhysicsObject mercury("Mercury", 3.302E+23f, 2439400.0f, 1000 * triple{ 3.252515818176519E+07, -5.550392669785608E+07, -7.567397717898630E+06 },
         1000 * triple{ 3.182356791384326E+01,  2.782212905746022E+01, -6.436334037578586E-01 });
     simulator.AddObject(&mercury);
@@ -174,7 +176,7 @@ void MoonMission() {
     double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * 284) + earth.radius + 400000.0));
     generatedObjs.push_back(new PhysicsObject(string.c_str(), 5, 40000.0, earth.p + triple((1000000.0 * 284) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * 284), 0), false, &earth));
     simulator.AddObject(generatedObjs[0]);*/
-    simulator.selectedObject = &earth;
+    simulator.selectedObject = spaceship;
     simulator.referenceObject = &sun;
     moon.referenceObject = &earth;
     earth.referenceObject = &sun;

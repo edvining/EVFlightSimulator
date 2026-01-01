@@ -9,6 +9,7 @@ public:
 	const double c = 299792458.0;
 	triple p, v, a;
 	triple p1, p2, p3, p4, p5, p6;
+	triple v1, v2, v3, v4;
 	triple a1, a2, a3, a4, a5, a6;
 	triple ExternalForces;
 	std::vector<triple> pastPositions;
@@ -93,7 +94,6 @@ public:
 	void RK4Step1(double dt)
 	{
 		this->p1 = this->p;
-		double dtOver2 = dt * 0.5;
 		this->p2 = this->p1 + this->v * dt + 0.5 * this->a1 * dt * dt;
 	}
 
@@ -118,40 +118,6 @@ public:
 		this->a = (a1 + (2 * a4) + (2 * a3) + a2) / 6;
 		this->p = this->p + this->v * dt + 0.5 * this->a * dt * dt;
 		this->v = this->v + this->a * dt;
-		if (this->v.magnitude() > c) {
-			this->v = this->v.normalized() * c;
-		}
-	}
-
-	void RKFStep1(double dt) {
-		this->p1 = this->p;
-		double dt2 = 0.25 * dt;
-		this->p2 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * dt2 * dt2);
-	}
-	void RKFStep2(double dt) {
-		double dt2 = (3.0 / 8.0) * dt;
-		this->p3 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0 / 32.0) * dt2 * dt2);
-	}
-
-	void RKFStep3(double dt) {
-		double dt2 = (12.0 / 13.0) * dt;
-		this->p4 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0 / 32.0) * dt2 * dt2);
-	}
-
-	void RKFStep4(double dt) {
-		double dt2 = (12.0 / 13.0) * dt;
-		this->p5 = this->p1 + (this->v * dt2) + (0.5 * this->a1 * (3.0 / 32.0) * dt2 * dt2) + (0.5 * a2 * (9.0 / 32.0) * dt2 * dt2);
-	}
-	void RKFStep5(double dt) {
-		double dt2 = (12.0 / 13.0) * dt;
-		this->p6 = this->p1 + (this->v * (0.05) * dt) + (0.5 * this->a5 * (0.05) * (0.05) * dt * dt) + (0.5 * this->a4 * ((23824.0 / 253365.0 - 0.05) * (23824.0 / 253365.0 - 0.05)) * dt * dt) + (0.5 * a3 * ((44.0 / 45.0 - 0.05) * (44.0 / 45.0 - 0.05)) * dt * dt) + (0.5 * a2 * ((3.0 / 40.0 - 0.05) * (3.0 / 40.0 - 0.05)) * dt * dt) + (0.5 * a1 * ((1.0 / 5.0 - 0.05) * (1.0 / 5.0 - 0.05)) * dt * dt);
-	}
-
-	void RKFStep6(double dt) {
-		double dt2 = (12.0 / 13.0) * dt;
-		this->p = this->p;
-		this->v = this->v + (this->a1 * (16.0 / 135.0) + this->a3 * (6656.0 / 12825.0) + this->a4 * (28561.0 / 56430.0) + this->a5 * (9.0 / 50.0) + this->a6 * (2.0 / 55.0)) * dt;
-
 		if (this->v.magnitude() > c) {
 			this->v = this->v.normalized() * c;
 		}
@@ -215,20 +181,137 @@ public:
 	virtual triple GetExternalForces() const {
 		return ExternalForces;
 	}
+
+	virtual void PreForceUpdate(double simTime, double dt, int RKStep) {}
+
+};
+
+struct Burn {
+	triple direction;
+	double thrust, startTime, durationInSeconds;
+	Burn(triple i_direction, double i_thrust, double i_startTime, double i_durationInSeconds) : direction(i_direction), thrust(i_thrust), startTime(i_startTime), durationInSeconds(i_durationInSeconds) {};
+};
+
+enum AutopilotMode {
+	IDLE,
+	AUTO_ORBIT
 };
 
 class Spaceship : public PhysicsObject {
 public:
+	PhysicsObject* targetObject = nullptr;
+	AutopilotMode autopilot = AutopilotMode::IDLE;
 	float propellantAmount = 0.0f;
 	triple currentThrustVector;
 	double currentThrustAmount;
-	Spaceship(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : PhysicsObject(name, m, radius, p, v, contributesToGravity, refObj) {}
+	std::vector<Burn> listOfBurns;
+	Spaceship(const char* name, float m, float radius, triple p, triple v, bool contributesToGravSim = true, PhysicsObject* refObj = nullptr) : PhysicsObject(name, m, radius, p, v, contributesToGravSim, refObj) {}
 	Spaceship() : PhysicsObject("Empty", 10, 1, triple::zero(), triple::zero(), false, nullptr){}
 
-	virtual triple GetExternalForces() const {
-		double thrust = std::min(maxThrustAvailable, currentThrustAmount);
-		return ExternalForces + currentThrustVector * thrust;
+	void PreForceUpdate(double simTime, double dt, int RKStep) override
+	{
+		currentThrustAmount = 0.0;
+		currentThrustVector = triple::zero();
+
+		if (autopilot == AutopilotMode::AUTO_ORBIT && targetObject) {
+			UpdateAutoOrbit(simTime, dt, RKStep);
+		}
+
+		for (const Burn& burn : listOfBurns)
+		{
+			if (simTime >= burn.startTime &&
+				simTime < burn.startTime + burn.durationInSeconds)
+			{
+				currentThrustAmount += burn.thrust;
+				currentThrustVector += burn.direction;
+			}
+		}
+
+		if (currentThrustAmount > 0.0)
+		{
+			currentThrustVector = currentThrustVector.normalized();
+
+			double thrust = std::min(currentThrustAmount, maxThrustAvailable);
+			AddForce(currentThrustVector * thrust);
+		}
 	}
+
+	void AddBurn(triple direction, double thrust, double startTime, double durationInSeconds)
+	{
+		listOfBurns.emplace_back(direction.normalized(), thrust, startTime, durationInSeconds);
+	}
+
+	void AutoOrbit(PhysicsObject* CelestialBody) 
+	{
+		targetObject = CelestialBody;
+		autopilot = AUTO_ORBIT;
+	}
+
+	void UpdateAutoOrbit(double simTime, double dt, int RKStep) 
+	{
+		if (!targetObject) return;
+
+		triple r = p - targetObject->p;
+		triple vrel = v - targetObject->v;
+
+		switch (RKStep) {
+		case 0: { r = p - targetObject->p;
+			 vrel = v - targetObject->v; } break;
+		case 1: { r = p1 - targetObject->p1;
+			 vrel = v1 - targetObject->v1; } break;
+		case 2: { r = p2 - targetObject->p2;
+			 vrel = v2 - targetObject->v2; } break;
+		case 3: { r = p3 - targetObject->p3;
+			 vrel = v3 - targetObject->v3; } break;
+		case 4: { r = p4 - targetObject->p4;
+			 vrel = v4 - targetObject->v4; } break;
+		}
+
+		triple rhat = r.normalized();
+		triple v_radial_vec = vrel.onto(rhat);
+
+		double v_radial = v_radial_vec.magnitude();
+		triple v_tangent_vec = vrel - v_radial_vec;
+		double v_tangent = v_tangent_vec.magnitude();
+
+		double rmag = r.magnitude();
+		double v_circ = std::sqrt(targetObject->mu / rmag);
+
+		constexpr double RADIAL_EPS = 0.05;
+		constexpr double TANGENT_EPS = 0.1;
+
+		if (std::abs(v_radial) > RADIAL_EPS)
+			return; // wait for apoapsis/periapsis
+
+		double error = v_tangent - v_circ;
+
+		if (std::abs(error) < TANGENT_EPS)
+		{
+			autopilot = AutopilotMode::IDLE;
+			return;
+		}
+
+		triple retrograde = -1*v_tangent_vec.normalized();
+
+		double Kp = 0.05;
+
+		currentThrustVector += retrograde;
+		currentThrustAmount += std::clamp(
+			Kp * std::abs(error),
+			0.0,
+			maxThrustAvailable
+		);
+		double desiredAcc = currentThrustAmount / m;
+
+		// Compute safe dt
+		double t_safe = std::min(dt, std::abs(error) / desiredAcc);
+
+		// Apply scaled thrust for this timestep
+		currentThrustAmount = currentThrustAmount * (t_safe / dt);
+		currentThrustVector = retrograde;
+		std::cout << "Thrusting at " << currentThrustAmount << "N along (" << currentThrustVector.string() << ")" << std::endl;
+	}
+
 private:
-	double maxThrustAvailable = 100.0f;
+	double maxThrustAvailable = 100.0;
 };
