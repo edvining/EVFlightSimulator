@@ -125,8 +125,7 @@ void MoonMission() {
     simulator.zoomLevel = /*0.01f;*/ 63781.37f; // metres / pixel7
     simulator.timeWarp = 1;
     simulator.substeps = 1;
-    simulator.type = SimType::SingleThreaded;
-    simulator.useRK = false;
+	simulator.type = SimType::SingleThreaded; // Simulator itself is single threaded to achieve highest speeds, the entire project is multi-threaded.
     simulator.showTraces = true;
     simulator.storingPositions = true;
     /*simulator.startThreads(16);*/
@@ -160,21 +159,6 @@ void MoonMission() {
     PhysicsObject saturn("Saturn", 5.6834E+26f, 58232000.0f, 1000 * triple{ 1.333357825865451E+09, -5.870000938448141E+08, -4.288097567254049E+07 },
         1000 * triple{ 3.351857209931528E+00,  8.822830821269344E+00, -2.872934017773172E-01 });
     simulator.AddObject(&saturn);
-    /*std::vector<PhysicsObject*> generatedObjs;
-    for (int i = 0; i < 400; i++) {
-        double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * i) + earth.radius + 400000.0));
-        std::cout << "Hi there, generating: Empty " << i << "Naming it: " << std::format("Empty {}", i).c_str() << std::endl;
-        const char* string = std::format("Empty {}", i).c_str();
-        std::cout << "String: " << string << std::endl;
-        generatedObjs.push_back(new PhysicsObject(string, 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false, &earth));
-    }
-    for (int i = 0; i < generatedObjs.size(); i++) {
-        simulator.AddObject(generatedObjs[i]);
-    }*/
-    /*std::string string = std::format("Empty {}", 284);
-    double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * 284) + earth.radius + 400000.0));
-    generatedObjs.push_back(new PhysicsObject(string.c_str(), 5, 40000.0, earth.p + triple((1000000.0 * 284) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * 284), 0), false, &earth));
-    simulator.AddObject(generatedObjs[0]);*/
     simulator.selectedObject = spaceship;
     simulator.referenceObject = &sun;
     moon.referenceObject = &moon;
@@ -182,25 +166,18 @@ void MoonMission() {
     sun.referenceObject = &sun;
     simulator.positionStoreDelay = 50;
     simulator.useRK = true;
-    simulator.numberOfStoredPositions = 1000;
-    simulator.SetReferenceObjects();
+    simulator.numberOfStoredPositions = 5000;
+    
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
-    if (app1.renderingMethod == RenderingMethod::MultiThreading)
-    {
-        // Start simulator thread
-        std::thread simulatorThread(RunSim, &simulator, &app1);
+    // Start simulator thread
+    std::thread simulatorThread(RunSim, &simulator, &app1);
 
-        // Run the application (rendering)
-        app1.run();
+    // Run the application renderer
+    app1.run();
 
-        // Wait for the simulator thread to finish
-        simulatorThread.join();
-    }
-    else {
-        app1.run();
-
-    }
+    // Wait for the simulator thread to finish / stop
+    simulatorThread.join();
 
 }
 

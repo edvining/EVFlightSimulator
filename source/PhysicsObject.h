@@ -31,6 +31,7 @@ public:
 	bool request1xTimeWarp = false;
 	bool requestedAlready = false;
 	bool resumeTimeWarp = false;
+	bool isNoneObject = false;
 	/// <summary>
 	/// Mass, radius, position, velocity
 	/// </summary>
@@ -152,15 +153,7 @@ public:
 			pastPositions.erase(pastPositions.begin());
 		}
 	}
-
-	void SetReferenceObject(std::vector<PhysicsObject*>& allobjects) {
-		referenceObjectIndex = find(allobjects.begin(), allobjects.end(), referenceObject) - allobjects.begin();
-		if (referenceObject == nullptr) {
-			referenceObjectIndex = 0;
-		}
-		referenceObject = allobjects[referenceObjectIndex];
-	}
-
+	
 	void SetOrbitAround(PhysicsObject* refObj, double SMA, double ECC, double AOP, double LAN, double INC, double MA) {
 		double vt = 2 * atan2(sqrt(1 + ECC) * sin((MA) * 0.5f), sqrt(1 - ECC) * cos(MA * 0.5f));
 		double rc = SMA * (1 - ECC * cos(MA));
@@ -283,7 +276,7 @@ public:
 		triple v_circ_vec = v_tangent_vec.normalized() * v_circ;
 
 		constexpr double RADIAL_EPS = 100.0;
-		constexpr double ERROR_EPS = 1.0;
+		constexpr double ERROR_EPS = 0.001;
 
 		if (std::abs(v_radial) < 150 && !request1xTimeWarp && !requestedAlready)
 		{
@@ -297,7 +290,6 @@ public:
 		if (error.magnitude() < ERROR_EPS)
 		{
 			autopilot = AutopilotMode::IDLE;
-			resumeTimeWarp = true;
 			requestedAlready = false;
 			std::cout << "Manoeuvre Complete" << std::endl;
 			return;

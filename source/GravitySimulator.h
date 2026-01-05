@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include "PhysicsObject.h"
 #include <chrono>
+#include <cmath>
 
 using namespace std::chrono_literals;
 
@@ -36,8 +37,8 @@ public:
     std::vector<PhysicsObject*> allObjects;
     std::vector<PhysicsObject*> gravitationalObjects;
     std::vector<PhysicsObject*> physicsObjects;
-    PhysicsObject* selectedObject;
-
+	PhysicsObject* noneObject = new PhysicsObject("None", 0, 1, triple(0,0,0), triple(0,0,0));
+    PhysicsObject* selectedObject = noneObject;
     // New members for rotating reference frame:
     PhysicsObject* frameOrientationObject = nullptr;
     bool useRotatingReferenceFrame = true;
@@ -248,19 +249,18 @@ public:
     }
 
     void ResetUniverseOrigin(PhysicsObject* selectedObject) {
-        for (PhysicsObject* object : allObjects)
-        {
-            if (object == selectedObject) {
-                continue;
+        if(selectedObject != nullptr){
+            for (PhysicsObject* object : allObjects)
+            {
+                if (object == selectedObject) {
+                    continue;
+                }
+                else {
+                    object->p -= selectedObject->p;
+                }
             }
-            else {
-                object->p -= selectedObject->p;
-                /*for (auto& position : object->pastPositions) {
-                    position -= selectedObject->p;
-                }*/
-            }
+            selectedObject->p = vec3(0, 0, 0);
         }
-        selectedObject->p = vec3(0, 0, 0);
     }
 
     void SolveDistanceConstraints() {
@@ -1030,12 +1030,12 @@ public:
 
     void SetReferenceObjects()
     {
-        selectedObjectIndex = find(allObjects.begin(), allObjects.end(), selectedObject) - allObjects.begin();
         for (PhysicsObject* object : allObjects)
         {
-            object->SetReferenceObject(allObjects);
-            if (object->referenceObject == nullptr) {
-                object->referenceObject = allObjects[0];
+            int referenceObjectIndex = std::find(allObjects.begin(), allObjects.end(), object->referenceObject) - allObjects.begin();
+
+            if (object->referenceObject != nullptr) {
+                object->referenceObject = allObjects[referenceObjectIndex]; 
             }
         }
         finished = true;

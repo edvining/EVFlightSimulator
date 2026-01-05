@@ -424,10 +424,10 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
                 ImGui::Text("Elapsed Time: %i years %i days %02i:%02i:%06.3f (Timewarp %.0fx)", years, days, hrs, mins, secs, linkedSim->timeWarp);
             }
             ImGui::Text("Simulator Delta T: %.5fs", (linkedSim->timeWarp * linkedSim->myDt) / linkedSim->substeps);
-            ImGui::Text("Substeps: %i", linkedSim->substeps);
+            //ImGui::Text("Substeps: %i", linkedSim->substeps);
             ImGui::DragFloat("Position store Delay", &linkedSim->positionStoreDelay, 0.01f, 100.0f);
             ImGui::DragInt("Number of stored positions", &linkedSim->numberOfStoredPositions, 1, 1000);
-            ImGui::Checkbox("Use Runge-Kutta 4th order method: ", &linkedSim->useRK);
+            //ImGui::Checkbox("Use Runge-Kutta 4th order method: ", &linkedSim->useRK);
             // Dropdown menu to select an object
             std::vector<PhysicsObject*> vec = linkedSim->allObjects;
             std::vector<std::string> objectNames;
@@ -440,40 +440,86 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
             for (const auto& name : objectNames) {
                 objectNamesCStr.push_back(name.c_str());
             }
-            selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
-            if (selectedObjectIndex >= vec.size()) {
-                selectedObjectIndex = 0;
-                linkedSim->selectedObject = linkedSim->allObjects[0];
+			objectNamesCStr.push_back("None");
+            if(linkedSim->selectedObject != linkedSim->noneObject)
+            {
+                selectedObjectIndex = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject)); // Index of the selected object
+                if (selectedObjectIndex >= vec.size()) {
+                    selectedObjectIndex = 0;
+                    linkedSim->selectedObject = linkedSim->allObjects[0];
+                }
             }
-            selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
-            if (selectedObjectIndex2 >= vec.size()) {
-                selectedObjectIndex2 = 0;
+            
+			if (linkedSim->selectedObject->referenceObject != nullptr)
+            {
+                selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+            }
+            else {
+                selectedObjectIndex2 = objectNamesCStr.size() - 1;
             }
             // Render the dropdown
             if (ImGui::Combo("Select Object", &selectedObjectIndex, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
                 // Optional: Handle object selection changes
             }
 
-            // Display the selected object's distance
+			// Display the selected object's distance from the centre of the simulation coordinates
             double distance = linkedSim->selectedObject->p.magnitude();
-            ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
-            triple currentV = (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v);
-            ImGui::Text("Current Speed: %.5f m/s (%.5fc)", currentV.magnitude(), currentV.magnitude() / 299792458.0);
-            triple radialV = (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).onto((linkedSim->selectedObject->p - linkedSim->selectedObject->referenceObject->p).normalized());
-            ImGui::Text("Radial Speed: %.5f m/s (%.5fc)", radialV.magnitude(), radialV.magnitude() / 299792458.0);
-            triple tangenV = currentV - radialV;
-            ImGui::Text("Tangential Speed: %.5f m/s (%.5fc)", tangenV.magnitude(), tangenV.magnitude() / 299792458.0);
+            if(linkedSim->selectedObject != linkedSim->noneObject) {
+                ImGui::Text("Current Distance From Centre: %.5f m (%.5f ly)", (linkedSim->selectedObject->p).magnitude(), (linkedSim->selectedObject->p).magnitude() / 9.461e15);
+                triple currentV, radialV;
+                // Calculate current velocity relative to reference object if it exists
+                if (linkedSim->selectedObject->referenceObject != nullptr) {
+                    currentV = (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v);
+                    radialV = (linkedSim->selectedObject->v - linkedSim->selectedObject->referenceObject->v).onto((linkedSim->selectedObject->p - linkedSim->selectedObject->referenceObject->p).normalized());
+                }
+                else {
+                    currentV = (linkedSim->selectedObject->v);
+                    radialV = (linkedSim->selectedObject->v).onto((linkedSim->selectedObject->p).normalized());
+                }
+                ImGui::Text("Current Speed: %.5f m/s (%.5fc)", currentV.magnitude(), currentV.magnitude() / 299792458.0);
+                // Only display radial and tangential speed if the reference object is different from the selected object
+                if (linkedSim->selectedObject->referenceObject != linkedSim->selectedObject) {
+                    ImGui::Text("Radial Speed: %.5f m/s (%.5fc)", radialV.magnitude(), radialV.magnitude() / 299792458.0);
+                    triple tangenV = currentV - radialV;
+                    ImGui::Text("Tangential Speed: %.5f m/s (%.5fc)", tangenV.magnitude(), tangenV.magnitude() / 299792458.0);
+                }
 
-            // Render the dropdown
-            if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
-                // Optional: Handle object selection changes
+                // Dropdown to select reference object
+
+                if (ImGui::Combo("Select Reference Object", &selectedObjectIndex2, objectNamesCStr.data(), (int)objectNamesCStr.size())) {
+
+                    if (selectedObjectIndex2 < linkedSim->allObjects.size())
+                    {
+                        if (linkedSim->selectedObject != nullptr)
+                        {
+                            linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
+                        }
+                    }
+                    else {
+                        if (linkedSim->selectedObject != nullptr)
+                        {
+                            linkedSim->selectedObject->referenceObject = nullptr;
+                        }
+                    }
+                }
             }
-            if (linkedSim->selectedObject != linkedSim->allObjects[selectedObjectIndex])
+            if (selectedObjectIndex < linkedSim->allObjects.size())
             {
-                linkedSim->selectedObject = linkedSim->allObjects[selectedObjectIndex];
-                selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+                if (linkedSim->selectedObject != linkedSim->allObjects[selectedObjectIndex])
+                {
+
+                    linkedSim->selectedObject = linkedSim->allObjects[selectedObjectIndex];
+                    if (linkedSim->selectedObject->referenceObject != nullptr)
+                    {
+                        selectedObjectIndex2 = (int)std::distance(vec.begin(), std::find(vec.begin(), vec.end(), linkedSim->selectedObject->referenceObject));
+                    }
+
+                }
             }
-            linkedSim->selectedObject->referenceObject = linkedSim->allObjects[selectedObjectIndex2];
+            else {
+                linkedSim->selectedObject = linkedSim->noneObject;
+            }
+           
 
             // Adding energy and momentum readouts
 
@@ -581,10 +627,10 @@ void renderer::renderSimulatorObjects(GravitySimulator* simulator, Shader& shade
         if (simulator->allObjects[i] == simulator->selectedObject) {
             selectedObjIndex = i;
         }
-        float _va1l = simulator->allObjects[i]->radius;
-        if (_va1l / simulator->zoomLevel < 2.0f)
+        float _radiusOfCurrentObject = simulator->allObjects[i]->radius;
+        if (_radiusOfCurrentObject / simulator->zoomLevel < 2.0f)
         {
-            _va1l = simulator->zoomLevel * 2.0f;
+            _radiusOfCurrentObject = simulator->zoomLevel * 2.0f;
         }
 
         // Calculate the object's position relative to the selected object
@@ -620,10 +666,10 @@ void renderer::renderSimulatorObjects(GravitySimulator* simulator, Shader& shade
 
         // Use the final X and Y positions for rendering
         positions3.insert(positions3.end(), {
-            (-_va1l + finalX) * screenHeightInv, (-_va1l + finalZ) * screenHeightInv, 0.0f, 0.0f,
-            (_va1l + finalX) * screenHeightInv, (-_va1l + finalZ) * screenHeightInv, 1.0f, 0.0f,
-            (_va1l + finalX) * screenHeightInv, (_va1l + finalZ) * screenHeightInv, 1.0f, 1.0f,
-            (-_va1l + finalX) * screenHeightInv, (_va1l + finalZ) * screenHeightInv, 0.0f, 1.0f });
+            (-_radiusOfCurrentObject + finalX) * screenHeightInv, (-_radiusOfCurrentObject + finalZ) * screenHeightInv, 0.0f, 0.0f,
+            (_radiusOfCurrentObject + finalX) * screenHeightInv, (-_radiusOfCurrentObject + finalZ) * screenHeightInv, 1.0f, 0.0f,
+            (_radiusOfCurrentObject + finalX) * screenHeightInv, (_radiusOfCurrentObject + finalZ) * screenHeightInv, 1.0f, 1.0f,
+            (-_radiusOfCurrentObject + finalX) * screenHeightInv, (_radiusOfCurrentObject + finalZ) * screenHeightInv, 0.0f, 1.0f });
         /*positions3.insert(positions3.end(), {
             -0.5f, -0.5f, 0.0f, 0.0f,
              0.5f, -0.5f, 1.0f, 0.0f,
@@ -779,8 +825,8 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader)
                     : simulator->allObjects[i]->pastPositions[j + 1];
 
                 triple referencePosition1{}, referencePosition2{}, referenceCurrentPosition{};
-
-                if (simulator->allObjects[i]->referenceObject)
+				
+                if (simulator->allObjects[i]->referenceObject != nullptr)
                 {
                     auto* ref = simulator->allObjects[i]->referenceObject;
                     size_t refIdx =
@@ -796,6 +842,10 @@ void renderer::renderTrailsLines(GravitySimulator* simulator, Shader& shader)
 
                     /* FIX 3: frozen reference current */
                     referenceCurrentPosition = frozenPositions[refIdx];
+                }
+                else{
+                    referencePosition1 = triple(0, 0, 0);
+                    referencePosition2 = triple(0, 0, 0);
                 }
 
                 double objX1, objY1, objZ1;
