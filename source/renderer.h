@@ -58,7 +58,7 @@ public:
     renderer();
     renderer(const char* title);
     renderer(const char* title, int openGLversionMajor, int openGLversionMinor);
-    renderer(int openGLversionMajor, int openGLversionMinor, int width, int height, const char* title);
+    renderer(const char* title, int openGLversionMajor, int openGLversionMinor, int width, int height);
 
     ~renderer();
 

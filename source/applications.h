@@ -26,19 +26,18 @@ void RunSim(GravitySimulator* sim, application* app) {
 
 void OberthEffect() {
     // Initialise application
-    application app1("Echo Victor Flight Simulator", 4, 6);
+    application app1("Echo Victor Flight Simulator", 4, 6, 1000, 900);
     app1.renderingMethod = RenderingMethod::MultiThreading;
     // Initialise simulator and objects
     GravitySimulator simulator;
-    simulator.zoomLevel = /*0.01f;*/ 63781.37f; // metres / pixel7
-    simulator.timeWarp = 1;
+    simulator.zoomLevel = /*0.01f;*/ 450000.7f; // metres / pixel7
+    simulator.timeWarp = 32768;
     simulator.substeps = 1;
     simulator.type = SimType::SingleThreaded;
-    simulator.useRK = false;
     simulator.showTraces = true;
     simulator.storingPositions = true;
     /*simulator.startThreads(16);*/
-    simulator.cameraRotationX = 0.0f;
+    simulator.cameraRotationX = 0.5f;
     PhysicsObject sun("Sun", 1988500e24f, 695700000.0f, { -1.009146052453886E+09, -6.342248515004860E+08, 2.918025134412420E+07 },
         { 1.102867590529470E+01, -8.970075624225537, -1.590822813779761E-01 });
     simulator.AddObject(&sun);
@@ -75,10 +74,8 @@ void OberthEffect() {
     std::vector<PhysicsObject*> generatedObjs;
     for (int i = 0; i < 400; i++) {
          double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * i) + earth.radius+400000.0));
-         std::cout << "Hi there, generating: Empty " << i << "Naming it: " << std::format("Empty {}", i).c_str() << std::endl;
          const char* string = std::format("Empty {}", i).c_str();
-         std::cout << "String: " << string << std::endl;
-         generatedObjs.push_back(new PhysicsObject(string, 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false, &earth));
+		 generatedObjs.push_back(new PhysicsObject(string, 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false, &sun)); // Change the reference object here to see the different effects
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
          simulator.AddObject(generatedObjs[i]);
@@ -92,9 +89,9 @@ void OberthEffect() {
     moon.referenceObject = &earth;
     earth.referenceObject = &sun;
     sun.referenceObject = &sun;
-    simulator.positionStoreDelay = 10;
+    simulator.positionStoreDelay = 1000;
     simulator.useRK = true;
-    simulator.numberOfStoredPositions = 1000;
+    simulator.numberOfStoredPositions = 500;
     simulator.SetReferenceObjects();
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
@@ -118,7 +115,7 @@ void OberthEffect() {
 
 void MoonMission() {
     // Initialise application
-    application app1("Echo Victor Flight Simulator", 4, 6);
+    application app1("Moon Mission Simulation", 4, 6);
     app1.renderingMethod = RenderingMethod::MultiThreading;
     // Initialise simulator and objects
     GravitySimulator simulator;
@@ -183,7 +180,7 @@ void MoonMission() {
 
 void ExternalForces() {
     // Initialise application
-    application app1(4, 6, 1920, 1080, "Echo Victor Flight Simulator");
+    application app1("Echo Victor Flight Simulator", 4, 6, 1920, 1080);
     app1.renderingMethod = RenderingMethod::MultiThreading;
     GravitySimulator simulator;
     simulator.zoomLevel = 0.5f; // metres / pixel

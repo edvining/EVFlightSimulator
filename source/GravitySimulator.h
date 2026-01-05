@@ -42,7 +42,6 @@ public:
     // New members for rotating reference frame:
     PhysicsObject* frameOrientationObject = nullptr;
     bool useRotatingReferenceFrame = true;
-
     PhysicsObject* referenceObject = nullptr;
     int selectedObjectIndex;
     double timeElapsed = 0;

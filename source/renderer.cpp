@@ -25,10 +25,10 @@ bool GLLogCall(const char* function, const char* file, int line)
     return true;
 }
 
-renderer::renderer() : renderer(4, 3, 800, 600, "This is a default window") {}
-renderer::renderer(const char* title) : renderer(3, 3, 800, 600, title) {}
-renderer::renderer(const char* title, int openGLversionMajor, int openGLversionMinor) : renderer(openGLversionMajor, openGLversionMinor, 800, 600, title) {}
-renderer::renderer(int openGLversionMajor, int openGLversionMinor, int width, int height, const char* title)
+renderer::renderer() : renderer("This is a default window", 4, 3, 800, 600) {}
+renderer::renderer(const char* title) : renderer(title, 3, 3, 800, 600) {}
+renderer::renderer(const char* title, int openGLversionMajor, int openGLversionMinor) : renderer(title, openGLversionMajor, openGLversionMinor, 800, 600) {}
+renderer::renderer(const char* title, int openGLversionMajor, int openGLversionMinor, int width, int height)
     : scrWidth(width), scrHeight(height), title(title) {
     // Initialize GLFW
     if (!glfwInit()) {
@@ -551,7 +551,10 @@ void renderer::renderImGui(GravitySimulator* linkedSim) {
     }
     if (showControls) {
         ImGui::Begin("Controls List");
-        ImGui::Text("A spaceship is enroute to the Moon from Earth. \nIt is on an intercept orbit, and will circularize \nwhen it reaches the moon\n\n==Controls List==\n");
+		if (title == "Moon Mission Simulation")
+        {
+            ImGui::Text("A spaceship is enroute to the Moon from Earth. \nIt is on an intercept orbit, and will circularize \nwhen it reaches the moon\n\n==Controls List==\n");
+        }
         ImGui::Text("F      - Fullscreen");
         ImGui::Text("C      - Show Controls");
         ImGui::Text("M      - Show Mission Data");
