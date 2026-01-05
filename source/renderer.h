@@ -78,6 +78,8 @@ public:
 
     void setMVPMatrix(Shader& shader);
 
+    void setMVPMatrixNoZoom(Shader& shader);
+
     void renderImGui(GravitySimulator* linkedSim);
 
     void renderSimulatorObjects(GravitySimulator* simulator, Shader& shader);
@@ -85,6 +87,8 @@ public:
     void renderTrails(GravitySimulator* simulator, Shader& shader);
 
     void renderTrailsLines(GravitySimulator* simulator, Shader& shader);
+
+    void renderExternalForces(GravitySimulator* simulator, Shader& shader);
 
     void renderCircle(const Shader& shader);
 
