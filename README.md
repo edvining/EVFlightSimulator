@@ -64,17 +64,17 @@ This design prevents visual artefacts such as jitter when simulating high-veloci
 |--------|------------|------|
 | Mass | Object mass | `double` |
 | Radius | Collision radius | `double` |
-| Position | World-space position | `Vector3D` |
-| Velocity | Linear velocity | `Vector3D` |
+| Position | World-space position | `triple` |
+| Velocity | Linear velocity | `triple` |
 
 **Current Limitation:**  
 - All physics objects are presently modelled as spheres. Support for mesh-based geometry and more advanced collision models is planned.
 
 ## Mathematical Types
 
-### Vector3D
+### `triple`
 
-`Vector3D` is a three-dimensional vector type implemented using **double-precision floating point** values.
+`triple` is a custom three-dimensional vector type implemented using **double-precision floating point** values.
 
 It is used throughout the simulation for:
 - Position and displacement vectors  
