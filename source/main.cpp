@@ -1,6 +1,6 @@
 #include "applications.h"
 
 int main() {
-    MoonMission();
+    OberthEffect();
 	return 0;
 }

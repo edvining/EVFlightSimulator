@@ -75,7 +75,7 @@ void OberthEffect() {
     for (int i = 0; i < 400; i++) {
          double calculatedV = sqrt((GravitySimulator::G * earth.m) / ((double)(1000000.0 * i) + earth.radius+400000.0));
          const char* string = std::format("Empty {}", i).c_str();
-		 generatedObjs.push_back(new PhysicsObject(string, 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false, &sun)); // Change the reference object here to see the different effects
+		 generatedObjs.push_back(new PhysicsObject(string, 5, 40000.0, earth.p + triple((1000000.0 * i) + earth.radius + 400000.0, 0, 0), earth.v + triple(0, calculatedV + (0.001 * i), 0), false, &earth)); // Change the reference object here to see the different effects
     }
     for (int i = 0; i < generatedObjs.size(); i++) {
          simulator.AddObject(generatedObjs[i]);
@@ -161,9 +161,9 @@ void MoonMission() {
     moon.referenceObject = &moon;
     earth.referenceObject = &sun;
     sun.referenceObject = &sun;
-    simulator.positionStoreDelay = 50;
+    simulator.positionStoreDelay = 1000;
     simulator.useRK = true;
-    simulator.numberOfStoredPositions = 5000;
+    simulator.numberOfStoredPositions = 1000;
     
     // Link the simulator to the visualiser app
     app1.linkSimulator(&simulator);
